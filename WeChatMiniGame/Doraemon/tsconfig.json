@@ -1,0 +1,12 @@
+{
+    "compilerOptions": {
+        "module": "ESNext",
+        "target": "ES6",
+        "allowJs": true,
+        "strict": true
+    },
+    "include": [
+        "minigame",
+        "typings"
+    ]
+}
