@@ -2,9 +2,11 @@ import * as PIXI from '../../libs/pixi.js';
 import config from '../config.js';
 import databus from '../databus.js';
 import { createBtn } from '../common/ui.js';
-import { pokerCard, pokerCardCharacter, pokerCardImage, hasRedJoker, getPokerCards, PokerCards, PokerCardsType, getCardsScore } from '../../js/poker'
+import { pokerCard, isGreaterThan, pokerCardImage, hasRedJoker, hasRedJokers, getPokerCards, PokerCards, PokerCardsType } from '../../js/poker'
 
 import Debug from '../base/debug.js';
+
+// https://www.flaticon.com/search?author_id=890&style_id=1373&type=standard&word=joker
 
 import {
     createText
@@ -22,17 +24,16 @@ export default class GameScene extends PIXI.Container {
     /** @type {number[]} */
     deck = [];
 
-    /** @type {PIXI.Sprite[]} */
+    /** @type {PIXI.Sprite} */
     cardsView;
 
     /** @type {PIXI.Sprite[]} */
-    containers;
+    playerViews;
 
     constructor() {
         super();
 
-        this.cardsView = this.nullsArray();
-        this.containers = this.nullsArray();
+        this.playerViews = this.nullsArray();
     }
 
     launch(gameServer) {
@@ -102,7 +103,7 @@ export default class GameScene extends PIXI.Container {
 
         this.initOpartions();
         this.initPlayer();
-
+        this.initPlayedCardListScrollView();
         this.appendBackBtn();
     }
 
@@ -182,17 +183,17 @@ export default class GameScene extends PIXI.Container {
             });
 
             let headimgs = [
-                'https://images-cdn.ubuy.qa/651d0932c432ec4330139106-zhenaly-yxinly-sexy-lingerie-for-women.jpg',
-                'https://m.media-amazon.com/images/I/61Wu+3WQv8L._AC_SL1500_.jpg',
-                'https://image.made-in-china.com/2f0j00RcfVJQjKbhUM/Best-Quality-Lingerie-Femme-Sexy-Lingerie-Black-Sexy-for-Plus-Size-Lingerie-Women.webp',
-                'https://st3.depositphotos.com/1074930/18713/i/1600/depositphotos_187135684-stock-photo-sexy-woman-in-bikini-on.jpg',
-                'https://st2.depositphotos.com/6444412/10731/i/950/depositphotos_107313254-stock-photo-perfect-sexy-women.jpg',
+                'https://www.flaticon.com/download/icon/5839743?icon_id=5839743&author=449&team=449&keyword=Clown&pack=5839645&style=Flat&style_id=1222&format=png&color=%23000000&colored=2&size=512&selection=1&type=standard&token=03AFcWeA4pdbbxnpawER9WdHKUNmowd63sX4q9YhvH_COPmeAj-QezHKuglKi-OaYfaGmktverv2gptrvJX0Za-lwzgJ2CxdkGGVR2HcOOEA8Y4MT8h7_I7jR06Que_V33x3shZ3CMQkUI7_x4Nsgf3fjte323fgaCIxCpA3nqpQcM-XoIh1wB2nLKX55dJUfNFwEH1bItjfLHpd7efprffE4w1b73NnOOwVVyti_FnyZ9OQDpathInL7_TxStYWB2b8PcTB2S7DgzqQn5F32bvzT-SNJJvuxjmEmKUkWI9iEpsspy1ceiyCFCOgCtE-vQc3te6srAr9Ih_wAQ-mUw7nv4KqBwgzAWJ-qNXlQJlpYVmXvDRO98-HhX0Ey1X5Oj3A4vELvlnkNWUI8vXtcqZkeLWHIWZnmGCTQgw8T-nWPK7FN3G_DsG-MH8cUD9_fAN_gQbdfcvCOzfbXn4hZfTNs6p88Hqzm5luoAewbTzgqBssf4P7HyzoTkNXiy9hUSlGLUnc96yBlfhvStlXtLvphawUJmz6Dixhno6OwlQfR1rieg4ip8n3cRKCRpbAy83IVtZb13FcGVwuW0YP80a3vrzwsBqUZgUFw7ebtROUXIQzm6RJSBripMgXpqOiB35cCC6AuMLo_bvtl7Dq-UK-QOZQT-e9uFMmvZen3_5_hSo00nVzK3k7_exR7prcRnJKl92L3bn-IH92CdOx9Ny1Cy9qxXhrRhxAv8IzZ7blYSHfpeREGwQ2L9b-_Gpjy5xHyWPWMaMVmum2eUhW1vG5vJJT8zZX3veX7w_34nVrQwLzVMoF8NqhztSsjdsnZQ8XKIVJpMwqxGbk12wKH7OggetIWfN-RBy1Ckofr3PTcA4ueYVuMDNXpxX6yJdkLQK6sz6L2hApKRW-o7b0paEYJXAvsxmsnMD73VFIUWqlJ8ieQjixFIWIkHoVpBPba1RavM_wyXlMqVz76C2lehXKW-IMP3m5XCzs3JITlnI2lJZhsErBX4pnZgtQs50ylB7YbulYTbb2WcsUWjAQH_6MNkc33p23UGa6HVnzOAIExrwn6BotOzo9Uc6wvoDrS1uNLLnFBi8_UjAAgLmi4CkYhdMpUlH4iWiYEZAjBZwtGXPuTe2cHtOuoZH0mDAnUn4_E-yPAQBzruqW3dUuVdPyufuYg4oxqY86-DMTkaoQpXSKJ2DI-_BA47nCfcc0jMKN3sXGqP7z0PL4LFUgOi8rtiuBh7QfUKdN7lBOhtJAibUcYQD0BmpzNInZzMMG1eRKq0O8r58yQJhjIvg75XJEfaeEwuiBu_vKpTDsUXX7vBS_opUBCZnJmWIuV4kPCG9n4ec5vqSgIximQ-Oc49T7LHEQz2IP1Dc3QBMwiShc_ppCEJyRvUZrV0TGHe-mOQCybvI0m0dm_bfKub-NAGkALfUYkhFa41AjN1NDeIAEWPV_CFfSbZcHEUmuS0WcmTEnXMNnwdpjeS0iPLhtfNSZHo8Rz_Zj_v9QhhFs61F4PXKExZAM9AINo6ttOygL5OfDcRiyEsa7xZseZSAjqAq6MXJ-5q6zhVWzuHCiJ0RkR48VpMhZxt8RS5LUVvpISw9tIBVyHv230Lo5f-T-SxOMYWZwcswe-PwTUPpGj46IdhQH5neRNOWKNHwYPU5Ti4KzIPRY8cExCAYbX1J0Wg1nICzQ8kjcWk0a0p_LZGBUEUYbw9l8cCg6hdV1ydE9jfidSVXHTd7AUPn7CiUn9NbOXpOUtM6vG_s0hqTACH0eBQ7jv2HIbGJ0_IzqEigcDAjR89iVBCFzOfZ9OnHEdabtkLtkRTLVRV_toxBKS-_v5ZEoWhlyqPpbmLMAP3FTUolzNtOiB-wX_Y5Gmq6q4bbDsGHwsnX5DWIfGPdzAF-o__z39x_jRHp_bbyRiCgm51300K5WN5d76mORX1jyWPEaLFFYlXVKecpzw-yKxLKZ0O0e1LWS2sJs0JwWsw5ugbemAFiuhBVHc6b1FApqxJyNUiluM5TYA_IA&search=joker',
+                'https://www.flaticon.com/download/icon/12418493?icon_id=12418493&author=1039&team=1039&keyword=Joker&pack=12418298&style=color+fill&style_id=1373&format=png&color=%23000000&colored=2&size=512&selection=1&type=standard&token=03AFcWeA7mxiEP9gC2hJhTwv3vi-c6v8rFJHvSKzT0O-4Pj7ky4UaGxpIPduTs6195qPG_sB8Jhj2zufyMa2RtuRzppaXk2jfLjVbOiuzxGuH5_wFD7NtNFQR9eM9CQXMyBWudwcRd0xKS4mdtxKRJDlWrCaqi4Akc8jWIds9o1TdYTnjdtD6Tf-bF_LdnKwlKwZ-AxAEUVkViEYYRhawvHb9A9keuPMAM0UvooT3mjOmOE371U_vyeAXtybXmOBKDXoEbup8wYSjV4AIVL6rNQNjfdhCCH3K-oRXZuKmWKqNtkxUx2Z5P7HLwt9U7NvGEjERbiPIh9cNasts3_oEweiofsObfkiufqt46_CAUT6MQd6Wf-auLJGialdimHPBx8gXThwVNnYC4_bUC87ZMtRf5fQnSN7jaNAoyrolLuV5asMm0N-vEO_5arGQm-VwnJBDympRMZAGQasjzslhDyBCWtwHlKS9HH5iwsps0Fc1Y6m2hq5e56nkmrhh02nEoUniznYRIzDsYM0uk1_5MXK04pzCwsoEvupgb-zSH64o9QPMgJYCWJ4HgatuUwDwQcaQK-WhaHHxo9ywTSqUPJC5INiMOAXdDJ7es6LTdQDgdsgIGthRMkmuw50fagWU7vwV_QkP5q6L3zHfyaJx2BgkhYsyWWjLRJiTypO8qSEtm0QAAjWaWXGARKqVGHAtXInvyMm6rYner9u5AtpKgElAEbi0BxHPRRi8VtkfgxNE5bbtUN6CEO4v3nEWQ6nAWec9IYkbzgew-_pOz76MYECSFt3jsG51oQvgic1gVdCT7nN29jSeZBfL6uvWQn3xs6OLN1W5qQ_oItfWH9xhN50pQXrzX7kCOfaldqEUHNz7wYEnEqyEFd0V9OBSP3K4wRND3QRL_IXQRwl6kgEuvTQ6aRghc6R7aUBqzjefDvXtasBZq1NhSVMFyh-_Z0e7RW4UnbGvsSWhwWkLMpYxSkPuJqjhnfH4FjUngq0RCDdMW9FLUbzhbtNjkQ-ux1qeaQaXXdkCysCu1WEZvpmxUePpQxm0xG-R3bkNA3O1ftHG1LohzR7_oL4h8TtUkslpc213x6H_AdZ64hC-4Vdq6WKt_Ewvs96kZU5oQtoHC6houjeoyDx1LO-KRVHLryQ9-BLiCg4PF8wDQEq3l6GSkGhBPMuJ84SNOCa-0k1KUMwjmhOsNdnbMWCznrBiGBHTsXRfosndZq-XmalDym_Tlipc8H3BtMXvje1BwUIIAOfmXmK8KwjqnHNWcBjY_f-rKIv-MclHglFQlymbc-vkF5cAM0xa7KFewWDz70P8_QDrWcU3pMxTDhOH9t7ANGVaN0L_Sd1MjciFobz5Zj4FkEEh7BwW0eqa73nXr2sDIhAvvuQWNCskm5auxNZfED7jH71lQklElKz_rb2VCGJ4iL1t8bx08xS7Q2A8A24dBqPsUDkfL30A4VfH7Ic0ko64rSDg6idARmw_CM3pQOX8QXGWXMGlPfAn5MURl1JY-QqjI-hPrET-SIQF1cv2JzN96R8hTi4Qpgc6_uzkgwrOpsOXwZmG14crL-DglRlNK5sL06_sbbDgjv0fXhw2XDfAEY7rCaKPJmBfAgKRmOrZ1nNYPgJX5hyp4-wxUp0V5RcGe5ygZ07fJPJ77rHrBYgkYYp02nuYWKJg4--bVW8n0imh5K3YGpb4sRlzmWvm3jJrHU1qHesPTsXRz2-gkDiIKTnYIq6Wb6k-uaLzEpPIVUvOtFJ09vpMBK4YwMfBfoIZxxkEXnPgmOG3m2HTRyTVNMWcrvS73EtJni_Gwg_Y0czj4R5ciWBVaClFKicd6aWp2-wj7x42BMv22LnchWK7X-xT8D3p8uUEkmJZLoGFSEnRzaZVU5olg_Ju8BYHhm6Nzme5SqTZM6uTJhVvfTocA9WW_p9WVOc87BGZWakk12JThQqiQq-bYlJ3LWTAAsy8HZBjEr7lE3muP-7qHdYnuvQUQ1givfVRZaWKfEm7FvSpsddvPsrnVGQ&search=joker',
+                'https://www.flaticon.com/download/icon/12418312?icon_id=12418312&author=1039&team=1039&keyword=Joker&pack=packs%2Fplaying-card-10&style=1373&format=png&color=%23000000&colored=1&size=512&selection=1&premium=0&type=standard&search=joker',
+                'https://www.flaticon.com/download/icon/1624750?icon_id=1624750&author=315&team=315&keyword=Joker&pack=1624731&style=Lineal+Color&style_id=698&format=png&color=%23000000&colored=2&size=512&selection=1&type=standard&search=joker',
+                'https://www.flaticon.com/download/icon/2316787?icon_id=2316787&author=270&team=339&keyword=Joker&pack=2316691&style=Lineal&style_id=211&format=png&color=%23000000&colored=1&size=512&selection=1&type=standard&search=joker'
             ]
             players.forEach((member, index) => {
                 if (member == null) {
                     let fake = {
                         clientId: 100 + index,
-                        headimg: headimgs[index],
+                        headimg: 'images/joker.png', //headimgs[index],
                         isReady: true,
                         nickname: 'AI机器人' + index,
                         posNum: index,
@@ -214,46 +215,95 @@ export default class GameScene extends PIXI.Container {
         var role = member.role;
 
         let imageWidth = 100;
-        let container = new PIXI.Container();
-        container.width = imageWidth;
-        container.height = imageWidth;
+        let playerView = new PIXI.Container();
+        playerView.width = imageWidth;
+        playerView.height = imageWidth;
         if (index === 0) {
-            container.x = 100;
-            container.y = config.GAME_HEIGHT - imageWidth - 100;
+            playerView.x = 100;
+            playerView.y = config.GAME_HEIGHT - imageWidth - 100;
         } else if (index === 1) {
-            container.x = config.GAME_WIDTH - imageWidth - 100;
-            container.y = 300;
+            playerView.x = config.GAME_WIDTH - imageWidth - 100;
+            playerView.y = 300;
         } else if (index === 2) {
-            container.x = config.GAME_WIDTH - imageWidth - 100;
-            container.y = 100;
+            playerView.x = config.GAME_WIDTH - imageWidth - 100;
+            playerView.y = 100;
         } else if (index === 3) {
-            container.x = 100;
-            container.y = 100;
+            playerView.x = 100;
+            playerView.y = 100;
         } else {
-            container.x = 100;
-            container.y = 300;
+            playerView.x = 100;
+            playerView.y = 300;
         }
-        this.addChild(container);
-        this.containers[index] = container;
+        this.addChild(playerView);
+        this.playerViews[index] = playerView;
 
         let avatar = new PIXI.Sprite.from(headimg);
         avatar.x = 0;
         avatar.y = 0;
         avatar.width = imageWidth;
         avatar.height = imageWidth;
-        container.addChild(avatar);
+        playerView.addChild(avatar);
 
         let name = new PIXI.Text(nickname, { fontSize: 30, align: 'center', fill: 0x515151 });
         name.x = 0;
         name.y = imageWidth + 5;
-        container.addChild(name);
+        playerView.addChild(name);
         console.log('player: ' + name.text);
 
         if (databus.testMode) {
-            container.interactive = true;
-            container.on('pointerdown', () => {
+            playerView.interactive = true;
+            playerView.on('pointerdown', () => {
                 this.test();
             });
+        }
+
+        let jokerSign = new PIXI.Sprite.from('images/cards/red_joker.png');
+        jokerSign.width = 40;
+        jokerSign.height = 70;
+        jokerSign.x = 0;
+        jokerSign.y = - 100;
+        jokerSign.visible = false;
+        playerView.addChild(jokerSign);
+
+        let jokerSign2 = new PIXI.Sprite.from('images/cards/red_joker.png');
+        jokerSign2.width = 40;
+        jokerSign2.height = 70;
+        jokerSign2.x = 50;
+        jokerSign2.y = - 100;
+        jokerSign2.visible = false;
+        playerView.addChild(jokerSign2);
+
+        let winnerIndexView = createText({
+            str: '',
+            style: { fontSize: 28, align: "center", fill: "#FFFF00" },
+            left: true,
+            x: 0,
+            y: 0,
+            width: imageWidth,
+            height: imageWidth
+        });
+        winnerIndexView.visible = false;
+        playerView.addChild(winnerIndexView);
+
+        if (index != 0) {
+            let cardBack = new PIXI.Sprite.from('images/cards/back.png');
+            cardBack.width = 90;
+            cardBack.height = 120;
+            if (index === 1) {
+                cardBack.x = - 100;
+                cardBack.y = 0;
+            } else if (index === 2) {
+                cardBack.x = - 100;
+                cardBack.y = 0;
+            } else if (index === 3) {
+                cardBack.x = 100;
+                cardBack.y = 0;
+            } else {
+                cardBack.x = 100;
+                cardBack.y = 0;
+            }
+            playerView.addChild(cardBack);
+            cardBack.visible = false;
         }
     }
 
@@ -293,7 +343,8 @@ export default class GameScene extends PIXI.Container {
 
         if (action == 'GAMESET') {
             if (sender != databus.selfPosNum) {
-                databus.gameSet = data;
+                databus.gameSet = Object.assign(new GameSet(), data);
+                databus.gameSet.currentGame = Object.assign(new PlayingGame, data.currentGame);
             }
 
             this.refresh();
@@ -333,8 +384,27 @@ export default class GameScene extends PIXI.Container {
 
             let cards = data;
             currentGame.cardLists[currentGame.currentPlayer] = currentGame.cardLists[currentGame.currentPlayer].filter(card => cards.indexOf(card) == -1);
-            currentGame.currentRoundPlayedCards.push([currentGame.currentPlayer, cards]);
-            currentGame.currentPlayer = (currentGame.currentPlayer + 1) % databus.max_players_count;
+            currentGame.currentRoundHands.push({ player: currentGame.currentPlayer, cards: cards });
+            if (currentGame.cardLists[currentGame.currentPlayer].length == 0) {
+                currentGame.winners.push(currentGame.currentPlayer);
+                let winners = currentGame.winners.slice().sort((a, b) => a - b);
+                let jokerPlayers = currentGame.jokerPlayers.slice().sort((a, b) => a - b);
+                let nonJokerPlayers = [];
+                for (let i = 0; i <= databus.max_cards_count; i++) {
+                    if (jokerPlayers.indexOf(i) == -1) {
+                        nonJokerPlayers.push(i);
+                    }
+                }
+                if (winners == jokerPlayers || winners == nonJokerPlayers) {
+                    currentGame.state = config.gameState.finished;
+                }
+            }
+
+            if (currentGame.state != config.gameState.finished) {
+                // next playing player to call
+                currentGame.turnToNextPlayingPlayer();
+            }
+
             this.gameServer.uploadGameSet();
             return;
         }
@@ -346,14 +416,10 @@ export default class GameScene extends PIXI.Container {
                 return;
             }
 
-            currentGame.currentPlayer = (sender + 1) % databus.max_players_count;
-            let lastPokerCards = currentGame.currentRoundPlayedCards;
-            if (lastPokerCards.length != 0) {
-                let lastHand = lastPokerCards.at(-1);
-                let lastHandPlayer = lastHand[0];
-                if (lastHandPlayer == sender) {
-                    this.settleHand();
-                }
+            let nextPlayer = currentGame.nextCallingPlayer();
+            currentGame.currentPlayer = nextPlayer;
+            if (currentGame.lastHandPlayer() == nextPlayer) {
+                this.settleHand();
             }
 
             this.gameServer.uploadGameSet();
@@ -395,86 +461,56 @@ export default class GameScene extends PIXI.Container {
         return array;
     }
 
-    clearCards() {
-        for (const key in this.cardsView) {
-            const value = this.cardsView[key];
-            this.removeChild(value);
-            this.cardsView[key] = null;
-        }
-    }
-
-    createCardList(cardList, index) {
+    createCardList(cardList) {
         /** @type {PIXI.Container} */
         let deckView = new PIXI.Container({ fill: 0xFF0000 })
-        if (index == 0) {
-            const safeAreaBottom = 34;
-            const cardHeight = 200;
-            const cardWidth = cardHeight * 250 / 363;
-            const selectedOffset = cardHeight * 0.2;
+        const safeAreaBottom = 34;
+        const cardHeight = 200;
+        const cardWidth = cardHeight * 250 / 363;
+        const selectedOffset = cardHeight * 0.2;
 
-            const deckViewHeight = cardHeight + safeAreaBottom + selectedOffset;
+        const deckViewHeight = cardHeight + safeAreaBottom + selectedOffset;
 
-            deckView.width = config.GAME_WIDTH;
-            deckView.height = deckViewHeight;
+        deckView.width = config.GAME_WIDTH;
+        deckView.height = deckViewHeight;
 
-            deckView.x = 0;
-            deckView.y = config.GAME_HEIGHT - deckViewHeight;
-            this.deck = cardList.sort((a, b) => b - a);
-            this.deck.forEach((card, index) => {
-                let image = pokerCardImage(card);
-                let cardImageView = new PIXI.Sprite.from(image);
-                cardImageView.x = (config.GAME_WIDTH / 2) - (((cardList.length / 2) - index) * 40);
-                cardImageView.y = selectedOffset;
-                if (this.selectedCards.indexOf(card) != -1) {
-                    cardImageView.y = 0;
-                }
-                cardImageView.width = cardWidth;
-                cardImageView.height = cardHeight;
-                deckView.addChild(cardImageView);
+        deckView.x = 0;
+        deckView.y = config.GAME_HEIGHT - deckViewHeight;
+        this.deck = cardList.sort((a, b) => b - a);
+        this.deck.forEach((card, index) => {
+            let image = pokerCardImage(card);
+            let cardImageView = new PIXI.Sprite.from(image);
+            cardImageView.x = (config.GAME_WIDTH / 2) - (((cardList.length / 2) - index) * 40);
+            cardImageView.y = selectedOffset;
+            if (this.selectedCards.indexOf(card) != -1) {
+                cardImageView.y = 0;
+            }
+            cardImageView.width = cardWidth;
+            cardImageView.height = cardHeight;
+            deckView.addChild(cardImageView);
 
-                cardImageView.interactive = true;
-                cardImageView.on('pointerdown', () => {
-                    this.clickCard(card);
-                    console.log('pointerdown');
-                });
-                // cardImageView.on('pointerup', () => {
-                //     console.log('pointerup');
-                // });
-                // cardImageView.on('pointermove', () => {
-                //     console.log('pointermove');
-                // });
-                // cardImageView.on('pointerover', () => {
-                //     console.log('pointerover');
-                // });
-                // cardImageView.on('pointerleave', () => {
-                //     console.log('pointerleave');
-                // });
-                // cardImageView.on('pointercancel', () => {
-                //     console.log('pointercancel');
-                // });
+            cardImageView.interactive = true;
+            cardImageView.on('pointerdown', () => {
+                this.clickCard(card);
+                console.log('pointerdown');
             });
-        } else if (index == 1) {
-            deckView.width = 200;
-            deckView.height = 200;
-            deckView.x = config.GAME_WIDTH - 100 - 200;
-            deckView.y = 300;
-        } else if (index === 2) {
-            deckView.width = 200;
-            deckView.height = 200;
-            deckView.x = config.GAME_WIDTH - 100 - 200;
-            deckView.y = 100;
-        } else if (index === 3) {
-            deckView.width = 200;
-            deckView.height = 200;
-            deckView.x = 200;
-            deckView.y = 100;
-        } else {
-            deckView.width = 200;
-            deckView.height = 200;
-            deckView.x = 200;
-            deckView.y = 300;
-        }
-        this.cardsView[index] = deckView;
+            // cardImageView.on('pointerup', () => {
+            //     console.log('pointerup');
+            // });
+            // cardImageView.on('pointermove', () => {
+            //     console.log('pointermove');
+            // });
+            // cardImageView.on('pointerover', () => {
+            //     console.log('pointerover');
+            // });
+            // cardImageView.on('pointerleave', () => {
+            //     console.log('pointerleave');
+            // });
+            // cardImageView.on('pointercancel', () => {
+            //     console.log('pointercancel');
+            // });
+        });
+        this.cardsView = deckView;
         this.addChild(deckView);
     }
 
@@ -522,23 +558,142 @@ export default class GameScene extends PIXI.Container {
     }
 
     refreshPlayers() {
+        let currentGame = databus.gameSet.currentGame;
+        let cardLists = currentGame.cardLists;
         let currentPlayer = databus.gameSet.currentGame.currentPlayer;
-        let index = this.localIndex(currentPlayer);
         for (let i = 0; i < databus.max_players_count; i++) {
-            let container = this.containers[i];
-            let label = container.children[1];
-            label.tint = (i == index) ? 0x000000 : 0xFFFFFF;
-            label.fill = (i == index) ? 0x000000 : 0xFFFFFF;
+            let localIndex = this.localIndex(i);
+            let playerView = this.playerViews[localIndex];
+
+            let label = playerView.children[1];
+            label.tint = (i == currentPlayer) ? 0x000000 : 0xFFFFFF;
+            label.fill = (i == currentPlayer) ? 0x000000 : 0xFFFFFF;
+
+            let jokerSign = playerView.children[2];
+            let jokerSign2 = playerView.children[3];
+            let announcedJokersCount = 0;
+            if (currentGame.announcer != -1 && hasRedJokers(cardLists[i])) {
+                announcedJokersCount = 2;
+                jokerSign.visible = true;
+                jokerSign2.visible = true;
+            } else if (currentGame.announcer != -1 && hasRedJoker(cardLists[i])) {
+                announcedJokersCount = 1;
+                jokerSign.visible = true;
+                jokerSign2.visible = false;
+            } else {
+                jokerSign.visible = false;
+                jokerSign2.visible = false;
+            }
+
+            let winnerIndexView = playerView.children[4];
+            let winnerIndex = currentGame.winners.indexOf(i);
+            winnerIndexView.text = winnerIndex == -1 ? '' : (winnerIndex + 1)
+
+            if (i != 0) {
+                let cardBack = playerView.children[5];
+                let remaining = cardLists[i].length - announcedJokersCount;
+                // cardBack.visible = remaining > 0;
+            }
         }
     }
 
     refreshCards() {
-        let cardLists = databus.gameSet.currentGame.cardLists;
-        this.clearCards();
+        this.removeChild(this.cardsView);
+        this.cardsView = null;
 
+        let cardLists = databus.gameSet.currentGame.cardLists;
         cardLists.forEach((cardList, index) => {
-            this.createCardList(cardList, this.localIndex(index));
+            if (this.localIndex(index) == 0) {
+                this.createCardList(cardList);
+            }
         });
+    }
+
+    refreshPlayedCards() {
+        this.lastHandCardsContainer.removeChildren()
+        this.scrollContainer.removeChildren();
+        let hands = databus.gameSet.currentGame.currentRoundHands;
+        for (let i = 0; i < hands.length; i++) {
+            let hand = hands[i];
+            let cards = hand.cards;
+            let isLast = i == hands.length - 1;
+            for (let j = 0; j < cards.length; j++) {
+                let card = cards[j];
+                let image = pokerCardImage(card);
+                let cardImageView = new PIXI.Sprite.from(image);
+                if (isLast) {
+                    const cardHeight = 200;
+                    const cardWidth = cardHeight * 250 / 363;            
+                    cardImageView.x = (config.GAME_WIDTH / 2) - (((cards.length / 2) - j) * 40);
+                    cardImageView.y = 0;
+                    cardImageView.width = cardWidth;
+                    cardImageView.height = cardHeight;
+                    this.lastHandCardsContainer.addChild(cardImageView);
+                } else {
+                    cardImageView.x = j * 20;
+                    cardImageView.y = i * 40;
+                    cardImageView.width = 40;
+                    cardImageView.height = 60;
+                    this.scrollContainer.addChild(cardImageView);
+                }
+            }
+        }
+    }
+
+    initPlayedCardListScrollView() {
+        const lastHandCardsContainer = new PIXI.Container();
+        lastHandCardsContainer.width = config.GAME_WIDTH;
+        lastHandCardsContainer.height = 300;
+        lastHandCardsContainer.x = 0;
+        lastHandCardsContainer.y = (config.GAME_HEIGHT - 300) / 2;
+        this.addChild(lastHandCardsContainer);
+        this.lastHandCardsContainer = lastHandCardsContainer;
+
+        const scrollContainer = new PIXI.Container();
+        this.scrollContainer = scrollContainer;
+
+        const mask = new PIXI.Graphics();
+        mask.beginFill(0x000000);
+        mask.drawRect(0, 0, config.GAME_WIDTH, 200);
+        mask.endFill();
+        scrollContainer.mask = mask;
+
+        const scrollView = new PIXI.Container();
+        scrollView.addChild(scrollContainer);
+        scrollView.addChild(mask);
+        scrollView.mask = mask;
+        scrollView.x = 200;
+        scrollView.y = 200;
+        scrollView.width = config.GAME_WIDTH - 400;
+        scrollView.height = 300;
+        this.addChild(scrollView);
+
+        // scrollable
+        scrollView.interactive = true;
+        scrollView.on("wheel", (event) => {
+            const delta = event.deltaY * 0.5;
+            scrollContainer.y = Math.min(0, Math.max(scrollContainer.y - delta, -scrollContainer.height + 200));
+        });
+
+        let isDragging = false;
+        let startY = 0;
+        let startContainerY = 0;
+
+        scrollView.interactive = true;
+        scrollView.on("pointerdown", (event) => {
+            isDragging = true;
+            startY = event.data.global.y;
+            startContainerY = scrollContainer.y;
+        });
+
+        scrollView.on("pointermove", (event) => {
+            if (!isDragging) return;
+            const newY = startContainerY + (event.data.global.y - startY);
+            scrollContainer.y = Math.min(0, Math.max(newY, -scrollContainer.height + 200));
+        });
+
+        scrollView.on("pointerup", () => { isDragging = false; });
+        scrollView.on("pointerupoutside", () => { isDragging = false; });
     }
 
     localIndex(index) {
@@ -550,21 +705,13 @@ export default class GameScene extends PIXI.Container {
 
     currentRoundScore() {
         let currentGame = databus.gameSet.currentGame;
-        let currentRoundPlayedCards = currentGame.currentRoundPlayedCards;
-        let totalScore = 0;
-        for (let i = 0; i < currentRoundPlayedCards.length; i++) {
-            let hand = currentRoundPlayedCards[i];
-            let cards = hand[1];
-            let score = getCardsScore(cards);
-            totalScore += score;
-        }
-        return totalScore;
+        return currentGame.currentRoundScore();
     }
 
     settleHand() {
         let score = this.currentRoundScore();
         let currentGame = databus.gameSet.currentGame;
-        currentGame.currentRoundPlayedCards = [];
+        currentGame.currentRoundHands = [];
         let teamIndex = 0;
         if (currentGame.jokerPlayers.indexOf(currentGame.currentPlayer) != -1) {
             teamIndex = 1;
@@ -572,6 +719,10 @@ export default class GameScene extends PIXI.Container {
         let originalScore = currentGame.scores[teamIndex];
         currentGame.scores[teamIndex] += score;
         console.log('Team' + teamIndex + ': ' + originalScore + ' + ' + score + ' = ' + currentGame.scores[teamIndex]);
+
+        if (currentGame.winners.indexOf(currentGame.currentPlayer) != -1) {
+            currentGame.turnToNextPlayingPlayer();
+        }
     }
 
     distribute() {
@@ -698,6 +849,7 @@ export default class GameScene extends PIXI.Container {
         }
 
         this.refreshCards();
+        this.refreshPlayedCards();
         this.refreshPlayers();
 
         var state = currentGame.state;
@@ -724,16 +876,15 @@ export default class GameScene extends PIXI.Container {
             let score = this.currentRoundScore();
             msgLabelText = '请(' + currentGame.currentPlayer + ')出牌...\n' + '本轮累计分值：' + score;
             if (currentGame.currentPlayer == databus.selfPosNum) {
-                let lastPokerCards = currentGame.currentRoundPlayedCards;
+                let hands = currentGame.currentRoundHands;
                 let lastHandPokerCards = null;
-                if (lastPokerCards.length != 0) {
+                if (hands.length > 0) {
                     passButtonVisible = true;
 
-                    let lastHand = lastPokerCards.at(-1);
-                    let lastHandPlayer = lastHand[0];
-                    if (lastHandPlayer == databus.selfPosNum) {
-                    } else {
-                        lastHandPokerCards = getPokerCards(lastPokerCards);
+                    let lastHand = hands.at(-1);
+                    let lastHandPlayer = lastHand.player;
+                    if (lastHandPlayer != databus.selfPosNum) {
+                        lastHandPokerCards = getPokerCards(lastHand.cards);
                     }
                 }
 
@@ -791,10 +942,10 @@ export default class GameScene extends PIXI.Container {
 
         // help pass;
         currentGame.currentPlayer = (currentGame.currentPlayer + 1) % databus.max_players_count;
-        let lastPokerCards = currentGame.currentRoundPlayedCards;
+        let lastPokerCards = currentGame.currentRoundHands;
         if (lastPokerCards.length != 0) {
             let lastHand = lastPokerCards.at(-1);
-            let lastHandPlayer = lastHand[0];
+            let lastHandPlayer = lastHand.player;
             if (lastHandPlayer == currentGame.currentPlayer) {
                 this.settleHand();
             }

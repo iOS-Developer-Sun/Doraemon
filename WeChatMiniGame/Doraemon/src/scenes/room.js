@@ -84,11 +84,13 @@ export default class Room extends PIXI.Container {
             x: config.GAME_WIDTH - 100,
             y: config.GAME_HEIGHT - 100,
             onclick: () => {
-                wx.shareAppMessage({
-                    title: '邀请好友',
-                    query: 'accessInfo=' + this.gameServer.accessInfo,
-                    imageUrl: 'https://res.wx.qq.com/wechatgame/product/luban/assets/img/sprites/bk.jpg',
-                });
+                console.log('invite:' + databus.currAccessInfo);
+                wx.setClipboardData({data: databus.currAccessInfo});
+                // wx.shareAppMessage({
+                //     title: '邀请好友',
+                //     query: 'accessInfo=' + this.gameServer.accessInfo,
+                //     imageUrl: 'https://res.wx.qq.com/wechatgame/product/luban/assets/img/sprites/bk.jpg',
+                // });
             }
         });
 
@@ -206,7 +208,7 @@ export default class Room extends PIXI.Container {
         this.appendBackBtn();
         this.allReady = (memberList.length == max_players_count) && !memberList.find(member => !member.isReady);
 
-        if (databus.testMode) {
+        if (!this.allReady && databus.testMode) {
             this.allReady = (memberList.length == 1) && !memberList.find(member => !member.isReady);
         }
 
@@ -226,12 +228,13 @@ export default class Room extends PIXI.Container {
                 if (member.posNum >= 0 && member.posNum < max_players_count && !member.isReady) {
                     // sit down
                     this.gameServer.updateReadyStatus(true);
+                    console.log('handleRoomInfoForTheFirstTime: sit down at ' + member.posNum);
                     return;
                 }
                 break;
             }
         }
-        self.handleRoomInfo(res);
+        this.handleRoomInfo(res);
     }
 
     _destroy() {

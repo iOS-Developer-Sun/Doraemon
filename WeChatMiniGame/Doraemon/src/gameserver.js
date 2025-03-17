@@ -195,13 +195,9 @@ class GameServer {
             return;
         }
 
+        this.hasGameStart = true;
         console.log('onGameStart');
         this.event.emit('onGameStart');
-        /*if ( needEmit ) {
-            this.event.emit('onGameStart');
-        }*/
-
-        this.hasGameStart = true;
 
         this.debugTime = setInterval(() => {
             this.uploadFrame([
@@ -279,7 +275,6 @@ class GameServer {
         if (this.reconnecting && res.frameId >= this.reconnectMaxFrameId) {
             this.reconnecting = false;
             this.startTime = new Date() - this.frameInterval * this.reconnectMaxFrameId;
-            wx.hideLoading();
         }
     }
 
@@ -345,11 +340,13 @@ class GameServer {
                                         // 手动调用onGameStart模拟正常开局
                                         this.onGameStart('人工');
                                     }
+                                    wx.hideLoading();
                                 }).catch((e) => {
+                                    wx.hideLoading();
                                     console.log(e);
                                     wx.showToast({
-                                        title: '重连失败，请重新开房间',
-                                        icon: 'none',
+                                        title: '重连失败',
+                                        icon: 'error',
                                         duration: 2000
                                     });
                                 });
@@ -366,23 +363,35 @@ class GameServer {
             maxMemberNum: options.maxMemberNum || 2,
             startPercent: options.startPercent || 0,
             needUserInfo: true,
-        }).then(res => {
-            const data = res.data || {};
-            databus.currAccessInfo = this.accessInfo = data.accessInfo || '';
-            databus.selfClientId = data.clientId;
-            this.event.emit('createRoom');
-            console.log(data);
-            callback && callback();
+            success: (res) => {
+                const data = res.data || {};
+                databus.currAccessInfo = this.accessInfo = data.accessInfo || '';
+                databus.selfClientId = data.clientId;
+                this.event.emit('createRoom');
+                console.log('createRoom:' + data.accessInfo);
+                callback && callback(null);
+            },
+            fail: (res) => {
+                callback && callback(res);
+            }
         });
     }
 
-    joinRoom(accessInfo) {
-        let res = this.server.joinRoom({ accessInfo });
-        let data = res.data || {};
-        databus.selfClientId = data.clientId;
-        this.accessInfo = databus.currAccessInfo;
-        console.log('join', data);
-        return res;
+    joinRoom(accessInfo, callback) {
+        this.server.joinRoom({
+            accessInfo, success: (res) => {
+                let data = res.data || {};
+                databus.currAccessInfo = this.accessInfo = data.accessInfo || '';
+                databus.selfClientId = data.clientId;
+                this.event.emit('joinRoom');
+                console.log('joinRoom:' + data.accessInfo);
+                callback && callback(null)
+            },
+            fail: (res) => {
+                console.log('joinRoom ' + data.accessInfo + ' failed:' + res.errCode);
+                callback && callback(res.errCode)
+            }
+        });
     }
 
     uploadFrame(actionList) {
@@ -437,7 +446,14 @@ class GameServer {
     }
 
     startGame() {
-        return this.server.startGame();
+        return this.server.startGame({
+            success: (res) => {
+                console.log('startGame success');
+            },
+            fail: (res) => {
+                console.log('startGame fail:' + res);
+            }
+        });
     }
 
     memberLeaveRoom(callback) {

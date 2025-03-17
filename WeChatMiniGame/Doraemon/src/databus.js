@@ -4,15 +4,18 @@ import GameSet from '../js/gameset'
 class DataBus {
     /** @type {GameSet} */
     gameSet = null;
+    version = '3.20-00.00'
 
     constructor() {
         this.testMode = false;
+        this.noShuffle = false;
         this.max_cards_count = 0;
         this.max_players_count = 5;
         this.announcingCountdown = 10;
 
         // TODO test
         this.testMode = true;
+        this.noShuffle = false;
         this.max_cards_count = 20;
         this.max_players_count = 2;
         this.announcingCountdown = 3;

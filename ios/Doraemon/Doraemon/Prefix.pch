@@ -1,0 +1,34 @@
+//
+// Prefix header for all source files of the 'Dayima' target in the 'Dayima' project
+//
+
+#import <Foundation/Foundation.h>
+#import <UIKit/UIKit.h>
+
+#import "UIView+Ext.h"
+#import "UIColor+Ext.h"
+
+#define NS_OPTIONS_SET(arg, bit) ((arg) |= (bit))
+#define NS_OPTIONS_UNSET(arg, bit) ((arg) &= (^bit))
+#define NS_OPTIONS_TEST(arg, bit) ((arg) & (bit))
+
+#define IS_320 (fabs((double)[UIScreen mainScreen].bounds.size.width - (double)320) < DBL_EPSILON)
+
+#define IS_480 (fabs((double)[UIScreen mainScreen].bounds.size.height - (double)480) < DBL_EPSILON)
+#define IS_568 (fabs((double)[UIScreen mainScreen].bounds.size.height - (double)568) < DBL_EPSILON)
+#define IS_667 (fabs((double)[UIScreen mainScreen].bounds.size.height - (double)667) < DBL_EPSILON)
+#define IS_736 (fabs((double)[UIScreen mainScreen].bounds.size.height - (double)736) < DBL_EPSILON)
+#define IS_IPHONE ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPhone)
+
+#define SYSTEM_VERSION_EQUAL_TO(v)                  ([[[UIDevice currentDevice] systemVersion] compare:v options:NSNumericSearch] == NSOrderedSame)
+#define SYSTEM_VERSION_GREATER_THAN(v)              ([[[UIDevice currentDevice] systemVersion] compare:v options:NSNumericSearch] == NSOrderedDescending)
+#define SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(v)  ([[[UIDevice currentDevice] systemVersion] compare:v options:NSNumericSearch] != NSOrderedAscending)
+#define SYSTEM_VERSION_LESS_THAN(v)                 ([[[UIDevice currentDevice] systemVersion] compare:v options:NSNumericSearch] == NSOrderedAscending)
+#define SYSTEM_VERSION_LESS_THAN_OR_EQUAL_TO(v)     ([[[UIDevice currentDevice] systemVersion] compare:v options:NSNumericSearch] != NSOrderedDescending)
+
+#define DTEXT(a) a
+
+#import "DUIWindow.h"
+#import "DUITableView.h"
+#import "DUIViewController.h"
+#import "DUINavigationController.h"

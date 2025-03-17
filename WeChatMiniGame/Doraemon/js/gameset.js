@@ -1,12 +1,19 @@
 import config from "../src/config";
 import databus from "../src/databus";
-import poker from "./poker";
+import { getCardsScore } from "./poker";
 
 export class Game {
     /** @type {number[]} */
     scores = [0, 0, 0, 0, 0];
 
     winner = -1;
+}
+
+export class Hand {
+    player = -1;
+
+    /** @type {number[]} */
+    cards = [];
 }
 
 export class PlayingGame {
@@ -24,8 +31,8 @@ export class PlayingGame {
     announcer = -1;
     announcingCountdown = 0;
 
-    /** @type {object[]>[]} */
-    currentRoundPlayedCards = []; // [ [0 : [3]], [1 : [5]], ...] 
+    /** @type {Hand[]} */
+    currentRoundHands = [];
 
     /** @type {number[]} */
     scores = [0, 0];
@@ -36,24 +43,27 @@ export class PlayingGame {
     constructor() {
         this.cardLists = [];
         for (let index = 0; index < databus.max_players_count; index++) {
-            this.cardLists.push([]);            
+            this.cardLists.push([]);
         }
     }
 
     static shuffle() {
         const cards_count = 108;
         var cards = [];
-        for (let i = 0; i < cards_count; i++) {
+        for (let i = cards_count - 1; i >= 0; i--) {
             cards.push(i);
         }
 
-        var currentIndex = cards_count;
-        while (currentIndex != 0) {
-            let randomIndex = Math.floor(Math.random() * currentIndex);
-            currentIndex--;
-            [cards[currentIndex], cards[randomIndex]] = [
-                cards[randomIndex], cards[currentIndex]];
+        if (!databus.noShuffle) {
+            var currentIndex = cards_count;
+            while (currentIndex != 0) {
+                let randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+                [cards[currentIndex], cards[randomIndex]] = [
+                    cards[randomIndex], cards[currentIndex]];
+            }
         }
+
         if (databus.max_cards_count) {
             return cards.slice(0, databus.max_cards_count);
         }
@@ -62,6 +72,57 @@ export class PlayingGame {
 
     static randomPlayerIndex() {
         return Math.floor(Math.random() * databus.max_players_count);
+    }
+
+    currentRoundScore() {
+        let hands = this.currentRoundHands;
+        let totalScore = 0;
+        for (let i = 0; i < hands.length; i++) {
+            let hand = hands[i];
+            let cards = hand.cards;
+            let score = getCardsScore(cards);
+            totalScore += score;
+        }
+        return totalScore;
+    }
+
+    turnToNextPlayingPlayer() {
+        let nextPlayer = this.currentPlayer;
+        let count = databus.max_players_count;
+        for (let index = 0; index < count; index++) {
+            nextPlayer = (nextPlayer + 1) % count;
+            if (this.winners.indexOf(nextPlayer) == -1) {
+                break;
+            }
+        }
+        if (nextPlayer == this.currentPlayer) {
+            // bad routine;
+            this.halt();
+            return;
+        }
+        this.currentPlayer = nextPlayer;
+    }
+
+    nextCallingPlayer() {
+        let lastHandPlayer = this.lastHandPlayer();
+        let nextPlayer = this.currentPlayer;
+        let count = databus.max_players_count;
+        for (let index = 0; index < count; index++) {
+            nextPlayer = (nextPlayer + 1) % count;
+            if (this.winners.indexOf(nextPlayer) == -1) {
+                break;
+            }
+            if (nextPlayer == lastHandPlayer) {
+                break;
+            }
+        }
+        return nextPlayer;
+    }
+
+    lastHandPlayer() {
+        let hands = this.currentRoundHands;
+        let lastHand = hands.at(-1);
+        return lastHand.player;
     }
 }
 

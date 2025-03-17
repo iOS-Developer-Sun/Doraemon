@@ -11,6 +11,7 @@ exports.pokerCardString = pokerCardString;
 exports.isRedJokerCard = isRedJokerCard;
 exports.isRedJoker = isRedJoker;
 exports.hasRedJoker = hasRedJoker;
+exports.hasRedJokers = hasRedJokers;
 exports.getPokerCards = getPokerCards;
 exports.isGreaterThan = isGreaterThan;
 exports.getCardScore = getCardScore;
@@ -152,6 +153,9 @@ function isRedJoker(index) {
 }
 function hasRedJoker(cards) {
     return cards.indexOf(106) != -1 || cards.indexOf(107) != -1;
+}
+function hasRedJokers(cards) {
+    return cards.indexOf(106) != -1 && cards.indexOf(107) != -1;
 }
 function getStrait(sortedValues, width) {
     if (sortedValues[sortedValues.length - 1] > PokerCardValue.ace) {

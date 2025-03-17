@@ -5,10 +5,10 @@ export function getDeviceInfo() {
     let info = {};
     let defaultInfo = {
         devicePixelRatio: 2,
-        windowWidth     : 375, windowHeight    : 667
+        windowWidth: 375, windowHeight: 667
     }
 
-    if ( typeof wx !== 'undefined' ) {
+    if (typeof wx !== 'undefined') {
         try {
             info = wx.getSystemInfoSync();
         } catch (e) {
@@ -52,10 +52,10 @@ export function convertRadian2Degree(radian) {
 }
 
 export function getNumInRange(num, min, max) {
-    if ( num < min )
+    if (num < min)
         return min;
 
-    else if ( num > max )
+    else if (num > max)
         return max;
 
     return num;
@@ -64,10 +64,10 @@ export function getNumInRange(num, min, max) {
 export function none() {
 }
 
-export function showTip(title= '', duration = 1500) {
+export function showTip(title = '', duration = 1500) {
     wx.showToast({
         title,
-        icon    : 'none',
+        icon: 'none',
         duration,
     });
 }
@@ -84,9 +84,9 @@ export function checkCircleCollision(circle1, circle2) {
 }
 
 export function limitNumInRange(num, min, max) {
-    if ( num > max ) {
+    if (num > max) {
         return num - max;
-    } else if ( num < min ) {
+    } else if (num < min) {
         return num + max;
     } else {
         return num;
@@ -95,9 +95,9 @@ export function limitNumInRange(num, min, max) {
 
 export function getMove(from, to) {
     let dis = to - from;
-    if ( dis < -180 ) {
+    if (dis < -180) {
         dis += 360;
-    } else if ( dis > 180 ) {
+    } else if (dis > 180) {
         dis -= 360;
     }
 

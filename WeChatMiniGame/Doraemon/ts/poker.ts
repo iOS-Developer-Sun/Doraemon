@@ -165,6 +165,10 @@ export function hasRedJoker(cards: number[]): boolean {
     return cards.indexOf(106) != -1 || cards.indexOf(107) != -1;
 }
 
+export function hasRedJokers(cards: number[]): boolean {
+    return cards.indexOf(106) != -1 && cards.indexOf(107) != -1;
+}
+
 export interface PokerCards {
     type: PokerCardsType;
     length: number;

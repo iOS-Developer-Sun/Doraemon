@@ -1,5 +1,6 @@
 {
     "deviceOrientation":"landscape",
+    "officialPrivacyAuthorizationShowingGap": 10,
     "lockStepOptions" : {
         "gameTick": 1000,
         "heartBeatTick": 30000,

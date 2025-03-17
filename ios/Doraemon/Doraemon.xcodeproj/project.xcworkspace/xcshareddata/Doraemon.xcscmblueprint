@@ -1,0 +1,35 @@
+{
+  "DVTSourceControlWorkspaceBlueprintPrimaryRemoteRepositoryKey" : "0c32662c-8cd0-4352-a946-bcda56e8c13f",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyRepositoryLocationsKey" : {
+    "0c32662c-8cd0-4352-a946-bcda56e8c13f" : {
+
+    },
+    "8581bf84-750e-47d5-a3b9-b892a33121cb" : {
+
+    }
+  },
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyStatesKey" : {
+    "0c32662c-8cd0-4352-a946-bcda56e8c13f" : 0,
+    "8581bf84-750e-47d5-a3b9-b892a33121cb" : 0
+  },
+  "DVTSourceControlWorkspaceBlueprintIdentifierKey" : "7BD50AC7-D94A-4FE0-9903-C2CB1C81E731",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyPathsKey" : {
+    "0c32662c-8cd0-4352-a946-bcda56e8c13f" : "JamesRainbowSun_Doraemon\/",
+    "8581bf84-750e-47d5-a3b9-b892a33121cb" : "JamesRainbowSun_King\/"
+  },
+  "DVTSourceControlWorkspaceBlueprintNameKey" : "Doraemon",
+  "DVTSourceControlWorkspaceBlueprintVersion" : 204,
+  "DVTSourceControlWorkspaceBlueprintRelativePathToProjectKey" : "trunk\/Doraemon\/Doraemon.xcodeproj",
+  "DVTSourceControlWorkspaceBlueprintRemoteRepositoriesKey" : [
+    {
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryURLKey" : "http:\/\/code.taobao.org\/svn\/JamesRainbowSun_Doraemon",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositorySystemKey" : "com.apple.dt.Xcode.sourcecontrol.Subversion",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "0c32662c-8cd0-4352-a946-bcda56e8c13f"
+    },
+    {
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryURLKey" : "http:\/\/code.taobao.org\/svn\/JamesRainbowSun_King",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositorySystemKey" : "com.apple.dt.Xcode.sourcecontrol.Subversion",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "8581bf84-750e-47d5-a3b9-b892a33121cb"
+    }
+  ]
+}

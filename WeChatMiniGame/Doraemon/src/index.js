@@ -1,13 +1,13 @@
-import * as PIXI   from '../libs/pixi.js';
-import config      from './config.js';
-import databus     from './databus.js';
-import BackGround  from './base/bg.js';
-import Tween       from './base/tween.js';
-import gameServer  from './gameserver.js';
-import login       from './base/login.js';
-import Room        from './scenes/room.js';
-import GameScene   from './scenes/GameScene.js';
-import Home        from './scenes/home.js';
+import * as PIXI from '../libs/pixi.js';
+import config from './config.js';
+import databus from './databus.js';
+import BackGround from './base/bg.js';
+import Tween from './base/tween.js';
+import gameServer from './gameserver.js';
+import login from './base/login.js';
+import Room from './scenes/room.js';
+import GameScene from './scenes/GameScene.js';
+import Home from './scenes/home.js';
 
 export default class App extends PIXI.Application {
     constructor() {
@@ -24,7 +24,7 @@ export default class App extends PIXI.Application {
         // this.aniId    = null;
         // this.bindLoop = this.loop.bind(this);
 
-        config.resources.forEach( item => PIXI.loader.add(item));
+        config.resources.forEach(item => PIXI.loader.add(item));
         // PIXI.loader.load(this.init.bind(this));
         this.init();
     }
@@ -33,7 +33,7 @@ export default class App extends PIXI.Application {
         let old = this.stage.getChildByName('scene');
 
         while (old) {
-            if ( old._destroy ) {
+            if (old._destroy) {
                 old._destroy();
             }
             old.destroy(true);
@@ -51,18 +51,18 @@ export default class App extends PIXI.Application {
     }
 
     joinToRoom() {
-        wx.showLoading({ title: '加入房间中'});
-        gameServer.joinRoom(databus.currAccessInfo).then(res => {
+        wx.showLoading({ title: '加入房间中' });
+        gameServer.joinRoom(databus.currAccessInfo, (errCode) => {
             wx.hideLoading();
-            this.runScene(Room);
-        }).catch(e=> {
-            console.log(e);
+            if (errCode == null) {
+                this.runScene(Room);
+            }
         });
     }
 
     scenesInit() {
         // 从会话点进来的场景
-        if ( databus.currAccessInfo ) {
+        if (databus.currAccessInfo) {
             this.joinToRoom();
         } else {
             this.runScene(Home);
@@ -76,12 +76,16 @@ export default class App extends PIXI.Application {
             this.runScene(Room);
         });
 
+        gameServer.event.on('joinRoom', () => {
+            this.runScene(Room);
+        })
+
         gameServer.event.on('onGameStart', () => {
             databus.gameInstance = this.runScene(GameScene);
         });
 
         gameServer.event.on('onGameEnd', () => {
-           gameServer.gameResult.forEach((member) => {
+            gameServer.gameResult.forEach((member) => {
                 var isSelf = member.nickname === databus.userInfo.nickName;
                 isSelf && wx.showModal({
                     content: member.win ? "你已获得胜利" : "你输了",
@@ -89,7 +93,7 @@ export default class App extends PIXI.Application {
                     confirmColor: "#02BB00",
                     showCancel: false,
                     success: () => {
-                       gameServer.clear();
+                        gameServer.clear();
                     }
                 });
             });
@@ -117,7 +121,7 @@ export default class App extends PIXI.Application {
         const x = window.innerWidth / 667;
         const y = window.innerHeight / 375;
 
-        if ( x > y ) {
+        if (x > y) {
             this.stage.scale.x = y / x;
             this.stage.x = (1 - this.stage.scale.x) / 2 * config.GAME_WIDTH;
         } else {
@@ -131,20 +135,23 @@ export default class App extends PIXI.Application {
         Tween.update();
     }
 
-    loop() {
-        let time = +new Date();
-        this._update(time - this.timer);
-        this.timer = time;
-        this.renderer.render(this.stage);
-        this.aniId = window.requestAnimationFrame(this.bindLoop);
-    }
+    // loop() {
+    //     let time = +new Date();
+    //     this._update(time - this.timer);
+    //     this.timer = time;
+    //     this.renderer.render(this.stage);
+    //     this.aniId = window.requestAnimationFrame(this.bindLoop);
+    // }
 
     bindWxEvents() {
         wx.onShow(res => {
-            console.log('wx.onShow', res)
             let accessInfo = res.query.accessInfo;
 
-            if (!accessInfo) return;
+            if (!accessInfo) {
+                return;
+            }
+
+            console.log("bindWxEvents accessInfo:" + accessInfo);
 
             if (!databus.currAccessInfo) {
                 databus.currAccessInfo = accessInfo;
@@ -154,34 +161,34 @@ export default class App extends PIXI.Application {
                 return;
             }
 
-            if (accessInfo !== databus.currAccessInfo) {
-                wx.showModal({
-                    title: "温馨提示",
-                    content: "你要离开当前房间，接受对方的对战邀请吗？",
-                    success: res => {
-                        if (!res.confirm) return;
-                        let room =
-                            databus.isOwner
-                                ? "ownerLeaveRoom"
-                                : "memberLeaveRoom";
-
-                        gameServer[room](res => {
-                            if (res.errCode)
-                                return wx.showToast({
-                                    title: "离开房间失败！",
-                                    icon: "none",
-                                    duration: 2000
-                                });
-
-                            databus.currAccessInfo = accessInfo;
-                            
-                            this.joinToRoom();
-                        });
-                    }
-                });
-
+            if (accessInfo == databus.currAccessInfo) {
                 return;
             }
+
+            wx.showModal({
+                title: "温馨提示",
+                content: "你要离开当前房间，接受对方的对战邀请吗？",
+                success: res => {
+                    if (!res.confirm) return;
+                    let room =
+                        databus.isOwner
+                            ? "ownerLeaveRoom"
+                            : "memberLeaveRoom";
+
+                    gameServer[room](res => {
+                        if (res.errCode)
+                            return wx.showToast({
+                                title: "离开房间失败！",
+                                icon: "none",
+                                duration: 2000
+                            });
+
+                        databus.currAccessInfo = accessInfo;
+
+                        this.joinToRoom();
+                    });
+                }
+            });
         });
     }
 }
