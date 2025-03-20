@@ -33,8 +33,9 @@ export default class Home extends PIXI.Container {
         this.addChild(
             createText({
                 str: ' 打懵' + databus.version,
+                align: 'center',
                 x: config.GAME_WIDTH / 2,
-                y: 287,
+                y: config.GAME_HEIGHT / 3,
                 style: {
                     fontSize: 64,
                     fill: "#FFFFFF"

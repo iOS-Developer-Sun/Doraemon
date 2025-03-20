@@ -200,14 +200,14 @@ class GameServer {
         this.event.emit('onGameStart');
 
         this.debugTime = setInterval(() => {
-            this.uploadFrame([
-                JSON.stringify({
-                    c: ++this.statCount,
-                    t: +new Date(),
-                    e: config.msg.STAT,
-                    id: databus.selfClientId,
-                })
-            ]);
+            // this.uploadFrame([
+            //     JSON.stringify({
+            //         c: ++this.statCount,
+            //         t: +new Date(),
+            //         e: config.msg.STAT,
+            //         id: databus.selfClientId,
+            //     })
+            // ]);
 
             let time = new Date() - this.startTime;
 
@@ -362,6 +362,7 @@ class GameServer {
         this.server.createRoom({
             maxMemberNum: options.maxMemberNum || 2,
             startPercent: options.startPercent || 0,
+            gameLastTime: 3600,    
             needUserInfo: true,
             success: (res) => {
                 const data = res.data || {};
@@ -420,6 +421,19 @@ class GameServer {
             action: "GAMESET",
             data: databus.gameSet
         })
+    }
+
+    requestGameSet() {
+        this.broadcast({
+            action: "ASKGAMESET",
+        })
+    }
+
+    respondGameSet(receiver) {
+        this.broadcast({
+            action: "ANSWERGAMESET",
+            data: databus.gameSet
+        }, [receiver]);
     }
 
     announce() {
@@ -555,16 +569,6 @@ class GameServer {
 
     settle() {
         databus.gameover = true;
-
-        if (databus.playerList[0].hp > databus.playerList[1].hp) {
-            databus.playerList[0].userData.win = true;
-        } else {
-            databus.playerList[1].userData.win = true;
-        }
-
-        this.gameResult = databus.playerList.map(player => {
-            return player.userData;
-        });
     }
 }
 

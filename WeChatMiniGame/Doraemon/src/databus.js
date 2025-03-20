@@ -4,7 +4,7 @@ import GameSet from '../js/gameset'
 class DataBus {
     /** @type {GameSet} */
     gameSet = null;
-    version = '3.20-00.00'
+    version = '3.20-23:51'
 
     constructor() {
         this.testMode = false;
@@ -16,7 +16,8 @@ class DataBus {
         // TODO test
         this.testMode = true;
         this.noShuffle = false;
-        this.max_cards_count = 20;
+        this.onePair = false;
+        this.max_cards_count = 54;
         this.max_players_count = 2;
         this.announcingCountdown = 3;
 
@@ -27,7 +28,6 @@ class DataBus {
         this.gameover = false;
         this.currAccessInfo = '';
         this.playerMap = {};
-        this.playerList = [];
         this.selfPosNum = 0;
         this.ownerPosNum = 0;
         this.selfClientId = 0;

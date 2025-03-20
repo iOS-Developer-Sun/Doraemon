@@ -42,8 +42,12 @@ export default class GameScene extends PIXI.Container {
         this.initViews();
         this.onRoomInfoChange();
         this.refresh();
-        if (databus.isOwner) {
-            this.act();
+        if (this.gameServer.reconnectMaxFrameId > 0) {
+            this.gameServer.requestGameSet();
+        } else {
+            if (databus.isOwner) {
+                this.act();
+            }
         }
     }
 
@@ -64,7 +68,7 @@ export default class GameScene extends PIXI.Container {
         this.gameServer.event.on(
             "onRoomInfoChange",
             (res => {
-                res.memberList.length < 2 && this.showModal('对方已离开房间，无法继续进行PK！', true);
+                res.memberList.length < databus.max_players_count && this.showModal('对方已离开房间，无法继续进行PK！', true);
             }).bind(this)
         );
     }
@@ -91,10 +95,11 @@ export default class GameScene extends PIXI.Container {
 
         this.msgLabel = createText({
             str: 'Hello',
+            align: 'center',
             style: { fontSize: font, fill: "#576B95" },
-            left: true,
-            x: 215,
-            y: 40,
+            left: false,
+            x: w / 2,
+            y: h / 2,
         });
         this.msgLabel.wordWrap = true;
         this.msgLabel.wordWrapWidth = w;
@@ -172,8 +177,6 @@ export default class GameScene extends PIXI.Container {
         console.log('initPlayer');
 
         let memberList = this.gameServer.roomInfo.memberList || [];
-
-        var shift = databus.selfPosNum;
 
         var players = this.nullsArray();
 
@@ -341,6 +344,29 @@ export default class GameScene extends PIXI.Container {
             return;
         }
 
+        if (action == 'ASKGAMESET') {
+            if (sender == databus.selfPosNum) {
+                return;
+            }
+
+            if (this.gameServer.reconnecting) {
+                return;
+            }
+
+            this.gameServer.respondGameSet(sender);
+            return;
+        }
+
+        if (action == 'ANSWERGAMESET') {
+            if (this.gameServer.reconnectMaxFrameId > 0) {
+                this.gameServer.reconnectMaxFrameId = 0;
+                databus.gameSet = Object.assign(new GameSet(), data);
+                databus.gameSet.currentGame = Object.assign(new PlayingGame, data.currentGame);
+                this.refresh();
+            }
+            return;
+        }
+ 
         if (action == 'GAMESET') {
             if (sender != databus.selfPosNum) {
                 databus.gameSet = Object.assign(new GameSet(), data);
@@ -390,13 +416,17 @@ export default class GameScene extends PIXI.Container {
                 let winners = currentGame.winners.slice().sort((a, b) => a - b);
                 let jokerPlayers = currentGame.jokerPlayers.slice().sort((a, b) => a - b);
                 let nonJokerPlayers = [];
-                for (let i = 0; i <= databus.max_cards_count; i++) {
+                for (let i = 0; i < databus.max_players_count; i++) {
                     if (jokerPlayers.indexOf(i) == -1) {
                         nonJokerPlayers.push(i);
                     }
                 }
-                if (winners == jokerPlayers || winners == nonJokerPlayers) {
+                if (winners.toString() === jokerPlayers.toString() || winners.toString() === nonJokerPlayers.toString()) {
                     currentGame.state = config.gameState.finished;
+                    setTimeout(() => {
+                        databus.gameSet.currentGame = new PlayingGame();
+                        this.act();
+                    }, 5000);        
                 }
             }
 
@@ -406,6 +436,7 @@ export default class GameScene extends PIXI.Container {
             }
 
             this.gameServer.uploadGameSet();
+
             return;
         }
 
@@ -534,13 +565,20 @@ export default class GameScene extends PIXI.Container {
     }
 
     playButtonDidClick() {
-        this.gameServer.playCards(this.selectedCards);
+        let pokerCards = getPokerCards(this.selectedCards);
+        if (pokerCards == undefined) {
+            this.halt();
+            return;
+        }
+
+        let cards = pokerCards.cards;
+        this.gameServer.playCards(cards);
         this.selectedCards = [];
         this.refreshCards();
     }
 
     halt() {
-        undefined();
+        // undefined();
     }
 
     /**
@@ -623,7 +661,7 @@ export default class GameScene extends PIXI.Container {
                 let cardImageView = new PIXI.Sprite.from(image);
                 if (isLast) {
                     const cardHeight = 200;
-                    const cardWidth = cardHeight * 250 / 363;            
+                    const cardWidth = cardHeight * 250 / 363;
                     cardImageView.x = (config.GAME_WIDTH / 2) - (((cards.length / 2) - j) * 40);
                     cardImageView.y = 0;
                     cardImageView.width = cardWidth;
@@ -768,7 +806,15 @@ export default class GameScene extends PIXI.Container {
             return;
         }
 
-        currentGame.jokerPlayers = currentGame.cardLists.filter(cardList => hasRedJoker(cardList));
+        let jokerPlayers = [];
+        for (let index = 0; index < currentGame.cardLists.length; index++) {
+            const cardList = currentGame.cardLists[index];
+            if (hasRedJoker(cardList)) {
+                jokerPlayers.push(index);
+            }
+        }
+
+        currentGame.jokerPlayers = jokerPlayers;
         if (currentGame.announcer != -1) {
             currentGame.currentPlayer = currentGame.announcer;
             currentGame.state = config.gameState.playing;
@@ -851,6 +897,7 @@ export default class GameScene extends PIXI.Container {
         this.refreshCards();
         this.refreshPlayedCards();
         this.refreshPlayers();
+        this.refreshSelectAllButton();
 
         var state = currentGame.state;
         if (state == config.gameState.init) {
@@ -874,7 +921,12 @@ export default class GameScene extends PIXI.Container {
             }
         } else if (state == config.gameState.playing) {
             let score = this.currentRoundScore();
-            msgLabelText = '请(' + currentGame.currentPlayer + ')出牌...\n' + '本轮累计分值：' + score;
+            let player = this.gameServer.roomInfo.memberList[currentGame.currentPlayer];
+            let name = currentGame.currentPlayer;
+            if (player != undefined) {
+                name = player.name;
+            }
+            msgLabelText = '请(' + name + ')出牌...\n' + '本轮累计分值：' + score;
             if (currentGame.currentPlayer == databus.selfPosNum) {
                 let hands = currentGame.currentRoundHands;
                 let lastHandPokerCards = null;

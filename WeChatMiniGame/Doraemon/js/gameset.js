@@ -48,14 +48,21 @@ export class PlayingGame {
     }
 
     static shuffle() {
-        const cards_count = 108;
         var cards = [];
-        for (let i = cards_count - 1; i >= 0; i--) {
-            cards.push(i);
+        if (databus.onePair) {
+            const cards_count = 54;
+            for (let i = cards_count - 1; i >= 0; i--) {
+                cards.push(i * 2);
+            }
+        } else {
+            const cards_count = 108;
+            for (let i = cards_count - 1; i >= 0; i--) {
+                cards.push(i);
+            }
         }
 
         if (!databus.noShuffle) {
-            var currentIndex = cards_count;
+            var currentIndex = cards.length;
             while (currentIndex != 0) {
                 let randomIndex = Math.floor(Math.random() * currentIndex);
                 currentIndex--;
@@ -64,7 +71,7 @@ export class PlayingGame {
             }
         }
 
-        if (databus.max_cards_count) {
+        if (databus.max_cards_count > 0) {
             return cards.slice(0, databus.max_cards_count);
         }
         return cards;
@@ -127,6 +134,8 @@ export class PlayingGame {
 }
 
 export default class GameSet {
+    version = 0;
+
     /** @type {Game[]} */
     games = []
 

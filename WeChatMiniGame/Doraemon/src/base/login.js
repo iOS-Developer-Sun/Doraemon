@@ -4,22 +4,26 @@ class Login {
     do(callback = none) {
         this.loginCallback = callback;
 
-        wx.getPrivacySetting({
-            success: (res) => {
-                console.log('getPrivacySetting success:' + res.errMsg);
-                if (res.errMsg == "getPrivacySetting:ok") {
-                    if (res.needAuthorization) {
-                        console.log('needAuthorization:' + res.privacyContractName);
-                        this.requestPrivace(res.privacyContractName);
-                    } else {
-                        this.start();
+        if (wx.getPrivacySetting != undefined) {
+            wx.getPrivacySetting({
+                success: (res) => {
+                    console.log('getPrivacySetting success:' + res.errMsg);
+                    if (res.errMsg == "getPrivacySetting:ok") {
+                        if (res.needAuthorization) {
+                            console.log('needAuthorization:' + res.privacyContractName);
+                            this.requestPrivace(res.privacyContractName);
+                        } else {
+                            this.start();
+                        }
                     }
+                },
+                fail: (res) => {
+                    console.log('getPrivacySetting fail');
                 }
-            },
-            fail: (res) => {
-                console.log('getPrivacySetting fail');
-            }
-        })
+            })
+        } else {
+            this.requestPrivace();
+        }
     }
 
     addLoginBtn() {
@@ -66,15 +70,19 @@ class Login {
         //     resolve({ buttonId: 'agree-btn', event: 'agree' });
         // })
 
-        wx.requirePrivacyAuthorize({
-            success: (res) => {
-                console.log('requirePrivacyAuthorize success');
-                this.start();
-            },
-            fail: (res) => {
-                console.log('requirePrivacyAuthorize fail');
-            }
-        });
+        if (wx.requirePrivacyAuthorize) {
+            wx.requirePrivacyAuthorize({
+                success: (res) => {
+                    console.log('requirePrivacyAuthorize success');
+                    this.start();
+                },
+                fail: (res) => {
+                    console.log('requirePrivacyAuthorize fail');
+                }
+            });
+        } else {
+            this.start();
+        }
     }
 
     start() {

@@ -173,6 +173,7 @@ export interface PokerCards {
     type: PokerCardsType;
     length: number;
     value: number;
+    cards: number[];
 }
 
 function getStrait(sortedValues: number[], width: number): number | undefined {
@@ -191,85 +192,105 @@ function getStrait(sortedValues: number[], width: number): number | undefined {
     return base;
 }
 
-function getThreeWithTwoStrait(sortedValues: number[], length: number): number | undefined {
-    let valueCount: Record<number, number> = {};
+export interface ThreeWithTwoStrait {
+    value: number;
+    cards: number[];
+}
+
+function getThreeWithTwoStrait(sortedCardIndices: number[], length: number): ThreeWithTwoStrait | undefined {
+    let valueCount: Record<number, number[]> = {};
     let keys: number[] = [];
-    for (let i = 0; i < sortedValues.length; i++) {
-        let value = sortedValues[i];
-        valueCount[value] = (valueCount[value] ? valueCount[value] : 0) + 1;
+    for (let i = 0; i < sortedCardIndices.length; i++) {
+        let cardIndex = sortedCardIndices[i];
+        let value = pokerCard(cardIndex).value;
+        if (valueCount[value] == undefined) {
+            valueCount[value] = [];
+        }
+        valueCount[value].push(cardIndex);
         if (keys.indexOf(value) == -1) {
             keys.push(value);
         }
     }
 
-    let majors: Record<number, number> = {};
-    let minors: Record<number, number> = {};
-    let majorKeys: number[] = [];
-    let minorKeys: number[] = [];
-    let minorHasSingle: boolean = false;
+    if (length < 3 && keys.length != length * 2) {
+        return undefined;
+    }
+
+
+    let allMajorKeys: number[] = [];
     for (let i = 0; i < keys.length; i++) {
         let key = keys[i];
-        let remaining = valueCount[key];
-        if (remaining >= 3) {
-            remaining = remaining - 3;
-            majors[key] = valueCount[key];
-            majorKeys.push(key);
+        if (valueCount[key].length >= 3) {
+            allMajorKeys.push(key);
+        }
+    }
+
+    if (allMajorKeys.length < length) {
+        return undefined;
+    }
+
+    for (let i = 0; i <= allMajorKeys.length - length; i++) {
+        let majorKeys = allMajorKeys.slice(allMajorKeys.length - i - length, allMajorKeys.length - i);
+
+        let base: (number | undefined) = undefined;
+        if (majorKeys.length == 1) {
+            base = majorKeys[0];
+        } else {
+            base = getStrait(majorKeys, 1);
         }
 
-        if (remaining > 0) {
-            minors[key] = remaining;
-            minorKeys.push(key);
-            if (remaining % 2 == 1) {
-                minorHasSingle = true;
+        if (base == undefined) {
+            continue;
+        }
+
+        let majors: Record<number, number[]> = {};
+        let minors: Record<number, number[]> = {};
+        let minorKeys: number[] = [];
+        let minorHasSingle: boolean = false;
+        for (let i = 0; i < keys.length; i++) {
+            let key = keys[i];
+            let remaining = valueCount[key].slice();
+            if (majorKeys.includes(key)) {
+                majors[key] = remaining.splice(remaining.length - 3, remaining.length);
+            }
+
+            if (remaining.length > 0) {
+                minors[key] = remaining;
+                minorKeys.push(key);
+                if (remaining.length % 2 == 1) {
+                    minorHasSingle = true;
+                }
             }
         }
-    }
 
-    if (majorKeys.length < length) {
-        return undefined;
-    }
+        const resultCards: () => number[] = () => {
+            var resultCards: number[] = [];
+            for (let index = 0; index < minorKeys.length; index++) {
+                const key = minorKeys[index];
+                const cards = minors[key];
+                resultCards.push(...cards);
+            }
+            for (let index = 0; index < majorKeys.length; index++) {
+                const key = majorKeys[index];
+                const cards = majors[key];
+                resultCards.push(...cards);
+            }
+            return resultCards.reverse();
+        };
 
-    let base: (number | undefined) = undefined;
-    if (majorKeys.length == 1) {
-        base = majorKeys[0];
-    } else {
-        base = getStrait(majorKeys, 1);
-    }
 
-    if (base == undefined) {
-        return undefined;
-    }
-
-    let extra = majorKeys.length - length;
-    if (extra < 0) {
-        return undefined;
-    }
-
-    if (length >= 3) {
-        return base + extra;
-    }
-
-    if (extra > 0) {
-        return undefined;
-    }
-
-    if (majorKeys.length == 2) {
-        if (minorHasSingle) {
-            return undefined;
+        if (length >= 3) {
+            return { value: base, cards: resultCards() };
+        } else if (length == 2) {
+            if (minorHasSingle) {
+                continue;
+            }
+            return { value: base, cards: resultCards() };
+        } else {
+            return { value: base, cards: resultCards() };
         }
-
-        return base;
     }
 
-    if (majorKeys.length == 1) {
-        if (minorKeys.length == 1) {
-            return base;
-        }
-
-        return undefined;
-    }
-
-    // bad routine
     return undefined;
 }
 
@@ -284,20 +305,20 @@ export function getPokerCards(pokerCards: number[]): PokerCards | undefined {
     let suits = cards.map((card: PokerCard) => card.suit);
     let values = cards.map((card: PokerCard) => card.value);
     let min = values[0];
-    let max = values.at(-1);
+    let max = values[values.length - 1];
     if (length === 1) {
         // 3
-        return { type: PokerCardsType.highcard, length: length, value: min };
+        return { type: PokerCardsType.highcard, length: length, value: min, cards: sortedCardIndices };
     }
 
     if (length === 2) {
         if (min == max) {
             if (isRedJoker(sortedCardIndices[0])) {
                 // 🃏🃏
-                return { type: PokerCardsType.redJokers, length: length, value: min };
+                return { type: PokerCardsType.redJokers, length: length, value: min, cards: sortedCardIndices };
             }
             // 33
-            return { type: PokerCardsType.pair, length: length, value: min };
+            return { type: PokerCardsType.pair, length: length, value: min, cards: sortedCardIndices.reverse() };
         }
 
         return undefined;
@@ -306,16 +327,16 @@ export function getPokerCards(pokerCards: number[]): PokerCards | undefined {
     if (length === 3) {
         if (min == max) {
             // 333
-            return { type: PokerCardsType.threeOfAKind, length: length, value: min };
+            return { type: PokerCardsType.threeOfAKind, length: length, value: min, cards: sortedCardIndices.reverse() };
         }
 
         if (min === PokerCardValue.five && values[1] === PokerCardValue.ten && values[2] === PokerCardValue.king) {
             if (suits[0] === suits[1] && suits[0] === suits[2]) {
                 // 5TK
-                return { type: PokerCardsType.tftk, length: length, value: suits[0] };
+                return { type: PokerCardsType.tftk, length: length, value: suits[0], cards: sortedCardIndices };
             }
             // 5TK
-            return { type: PokerCardsType.fftk, length: length, value: min };
+            return { type: PokerCardsType.fftk, length: length, value: min, cards: sortedCardIndices };
         }
 
         return undefined;
@@ -324,12 +345,17 @@ export function getPokerCards(pokerCards: number[]): PokerCards | undefined {
     if (length === 4) {
         if (min == max) {
             // 3333
-            return { type: PokerCardsType.fourOfAKind, length: length, value: min };
+            return { type: PokerCardsType.fourOfAKind, length: length, value: min, cards: sortedCardIndices.reverse() };
         }
 
-        if (min === values[2] || values[1] === values[3]) {
+        if (min === values[2]) {
             // 333 4
-            return { type: PokerCardsType.threeWithOne, length: length, value: min };
+            return { type: PokerCardsType.threeWithOne, length: length, value: min, cards: sortedCardIndices };
+        }
+
+        if (values[1] === max) {
+            // 555 4
+            return { type: PokerCardsType.threeWithOne, length: length, value: min, cards: sortedCardIndices.reverse() };
         }
 
         return undefined;
@@ -338,18 +364,18 @@ export function getPokerCards(pokerCards: number[]): PokerCards | undefined {
     if (length === 5) {
         if (min == max) {
             // 33333
-            return { type: PokerCardsType.fiveOfAKind, length: length, value: min };
+            return { type: PokerCardsType.fiveOfAKind, length: length, value: min, cards: sortedCardIndices.reverse() };
         }
 
-        let value = getThreeWithTwoStrait(values, length / 5);
-        if (value != undefined) {
+        let threeWithTwoStrait = getThreeWithTwoStrait(sortedCardIndices, length / 5);
+        if (threeWithTwoStrait != undefined) {
             // 333 44
-            return { type: PokerCardsType.fullHouseStrait, length: length, value: value };
+            return { type: PokerCardsType.fullHouseStrait, length: length, value: threeWithTwoStrait.value, cards: threeWithTwoStrait.cards };
         }
 
         if (getStrait(values, 1) != undefined) {
             // 34567
-            return { type: PokerCardsType.strait, length: length, value: min };
+            return { type: PokerCardsType.strait, length: length, value: min, cards: sortedCardIndices.reverse() };
         }
 
         return undefined;
@@ -358,22 +384,22 @@ export function getPokerCards(pokerCards: number[]): PokerCards | undefined {
     if (length === 6) {
         if (min == max) {
             // 333333
-            return { type: PokerCardsType.sixOfAKind, length: length, value: min };
+            return { type: PokerCardsType.sixOfAKind, length: length, value: min, cards: sortedCardIndices.reverse() };
         }
 
         if (getStrait(values, 3) != undefined) {
             // 333 444
-            return { type: PokerCardsType.trioStrait, length: length, value: min };
+            return { type: PokerCardsType.trioStrait, length: length, value: min, cards: sortedCardIndices.reverse() };
         }
 
         if (getStrait(values, 2) != undefined) {
             // 33 44 55
-            return { type: PokerCardsType.pairStrait, length: length, value: min };
+            return { type: PokerCardsType.pairStrait, length: length, value: min, cards: sortedCardIndices.reverse() };
         }
 
         if (getStrait(values, 1) != undefined) {
             // 345678
-            return { type: PokerCardsType.strait, length: length, value: min };
+            return { type: PokerCardsType.strait, length: length, value: min, cards: sortedCardIndices.reverse() };
         }
 
         return undefined;
@@ -382,12 +408,12 @@ export function getPokerCards(pokerCards: number[]): PokerCards | undefined {
     if (length === 7) {
         if (min == max) {
             // 3333333
-            return { type: PokerCardsType.sevenOfAKind, length: length, value: min };
+            return { type: PokerCardsType.sevenOfAKind, length: length, value: min, cards: sortedCardIndices.reverse() };
         }
 
         if (getStrait(values, 1) != undefined) {
             // 3456789
-            return { type: PokerCardsType.strait, length: length, value: min };
+            return { type: PokerCardsType.strait, length: length, value: min, cards: sortedCardIndices.reverse() };
         }
 
         return undefined;
@@ -396,17 +422,17 @@ export function getPokerCards(pokerCards: number[]): PokerCards | undefined {
     if (length === 8) {
         if (min == max) {
             // 33333333
-            return { type: PokerCardsType.eightOfAKind, length: length, value: min };
+            return { type: PokerCardsType.eightOfAKind, length: length, value: min, cards: sortedCardIndices.reverse() };
         }
 
         if (getStrait(values, 2) != undefined) {
             // 33 44 55 66
-            return { type: PokerCardsType.pairStrait, length: length, value: min };
+            return { type: PokerCardsType.pairStrait, length: length, value: min, cards: sortedCardIndices.reverse() };
         }
 
         if (getStrait(values, 1) != undefined) {
             // 3456789T
-            return { type: PokerCardsType.strait, value: min, length: length };
+            return { type: PokerCardsType.strait, value: min, length: length, cards: sortedCardIndices.reverse() };
         }
 
         return undefined;
@@ -415,32 +441,32 @@ export function getPokerCards(pokerCards: number[]): PokerCards | undefined {
     if (length === 9) {
         if (getStrait(values, 3) != undefined) {
             // 333 444 555
-            return { type: PokerCardsType.trioStrait, length: length, value: min };
+            return { type: PokerCardsType.trioStrait, length: length, value: min, cards: sortedCardIndices.reverse() };
         }
 
         if (getStrait(values, 1) != undefined) {
             // 3456789TJ
-            return { type: PokerCardsType.strait, value: min, length: length };
+            return { type: PokerCardsType.strait, value: min, length: length, cards: sortedCardIndices.reverse() };
         }
 
         return undefined;
     }
 
     if (length === 10) {
-        let value = getThreeWithTwoStrait(values, length / 5);
-        if (value != undefined) {
+        let threeWithTwoStrait = getThreeWithTwoStrait(sortedCardIndices, length / 5);
+        if (threeWithTwoStrait != undefined) {
             // 333 444 55 88
-            return { type: PokerCardsType.fullHouseStrait, length: length, value: value };
+            return { type: PokerCardsType.fullHouseStrait, length: length, value: threeWithTwoStrait.value, cards: threeWithTwoStrait.cards };
         }
 
         if (getStrait(values, 2) != undefined) {
             // 33 44 55 66 77
-            return { type: PokerCardsType.pairStrait, length: length, value: min };
+            return { type: PokerCardsType.pairStrait, length: length, value: min, cards: sortedCardIndices.reverse() };
         }
 
         if (getStrait(values, 1) != undefined) {
             // 3456789TJQ
-            return { type: PokerCardsType.strait, length: length, value: min };
+            return { type: PokerCardsType.strait, length: length, value: min, cards: sortedCardIndices.reverse() };
         }
 
         return undefined;
@@ -450,7 +476,7 @@ export function getPokerCards(pokerCards: number[]): PokerCards | undefined {
     if (length === 11) {
         if (getStrait(values, 1) != undefined) {
             // 3456789TJQK
-            return { type: PokerCardsType.strait, length: length, value: min };
+            return { type: PokerCardsType.strait, length: length, value: min, cards: sortedCardIndices.reverse() };
         }
 
         return undefined;
@@ -459,17 +485,17 @@ export function getPokerCards(pokerCards: number[]): PokerCards | undefined {
     if (length === 12) {
         if (getStrait(values, 3) != undefined) {
             // 333 444 555 666
-            return { type: PokerCardsType.trioStrait, length: length, value: min };
+            return { type: PokerCardsType.trioStrait, length: length, value: min, cards: sortedCardIndices.reverse() };
         }
 
         if (getStrait(values, 2) != undefined) {
             // 33 44 55 66 77 88
-            return { type: PokerCardsType.pairStrait, length: length, value: min };
+            return { type: PokerCardsType.pairStrait, length: length, value: min, cards: sortedCardIndices.reverse() };
         }
 
         if (getStrait(values, 1) != undefined) {
             // 3456789TJQKA
-            return { type: PokerCardsType.strait, length: length, value: min };
+            return { type: PokerCardsType.strait, length: length, value: min, cards: sortedCardIndices.reverse() };
         }
 
         return undefined;
@@ -478,22 +504,22 @@ export function getPokerCards(pokerCards: number[]): PokerCards | undefined {
     if (length === 14) {
         if (getStrait(values, 2) != undefined) {
             // 33 44 55 66 77 88 99
-            return { type: PokerCardsType.pairStrait, length: length, value: min };
+            return { type: PokerCardsType.pairStrait, length: length, value: min, cards: sortedCardIndices.reverse() };
         }
 
         return undefined;
     }
 
     if (length === 15) {
-        let value = getThreeWithTwoStrait(values, length / 5);
-        if (value != undefined) {
+        let threeWithTwoStrait = getThreeWithTwoStrait(sortedCardIndices, length / 5);
+        if (threeWithTwoStrait != undefined) {
             // 333 444 555 68TQAA
-            return { type: PokerCardsType.fullHouseStrait, length: length, value: value };
+            return { type: PokerCardsType.fullHouseStrait, length: length, value: threeWithTwoStrait.value, cards: threeWithTwoStrait.cards };
         }
 
         if (getStrait(values, 3) != undefined) {
             // 333 444 555 666 777
-            return { type: PokerCardsType.trioStrait, length: length, value: min };
+            return { type: PokerCardsType.trioStrait, length: length, value: min, cards: sortedCardIndices.reverse() };
         }
 
         return undefined;
@@ -502,7 +528,7 @@ export function getPokerCards(pokerCards: number[]): PokerCards | undefined {
     if (length === 16) {
         if (getStrait(values, 2) != undefined) {
             // 33 44 55 66 77 88 99 TT
-            return { type: PokerCardsType.pairStrait, length: length, value: min };
+            return { type: PokerCardsType.pairStrait, length: length, value: min, cards: sortedCardIndices.reverse() };
         }
 
         return undefined;
@@ -511,27 +537,27 @@ export function getPokerCards(pokerCards: number[]): PokerCards | undefined {
     if (length === 18) {
         if (getStrait(values, 3) != undefined) {
             // 333 444 555 666 777 888
-            return { type: PokerCardsType.trioStrait, length: length, value: min };
+            return { type: PokerCardsType.trioStrait, length: length, value: min, cards: sortedCardIndices.reverse() };
         }
 
         if (getStrait(values, 2) != undefined) {
             // 33 44 55 66 77 88 99 TT JJ
-            return { type: PokerCardsType.pairStrait, length: length, value: min };
+            return { type: PokerCardsType.pairStrait, length: length, value: min, cards: sortedCardIndices.reverse() };
         }
 
         return undefined;
     }
 
     if (length === 20) {
-        let value = getThreeWithTwoStrait(values, length / 5);
-        if (value != undefined) {
+        let threeWithTwoStrait = getThreeWithTwoStrait(sortedCardIndices, length / 5);
+        if (threeWithTwoStrait != undefined) {
             // 333 444 555 666 789TJQKA
-            return { type: PokerCardsType.fullHouseStrait, length: length, value: value };
+            return { type: PokerCardsType.fullHouseStrait, length: length, value: threeWithTwoStrait.value, cards: threeWithTwoStrait.cards };
         }
 
         if (getStrait(values, 2) != undefined) {
             // 33 44 55 66 77 88 99 TT JJ QQ
-            return { type: PokerCardsType.pairStrait, length: length, value: min };
+            return { type: PokerCardsType.pairStrait, length: length, value: min, cards: sortedCardIndices.reverse() };
         }
 
         return undefined;
@@ -540,7 +566,7 @@ export function getPokerCards(pokerCards: number[]): PokerCards | undefined {
     if (length === 21) {
         if (getStrait(values, 3) != undefined) {
             // 333 444 555 666 777 888 999
-            return { type: PokerCardsType.trioStrait, length: length, value: min };
+            return { type: PokerCardsType.trioStrait, length: length, value: min, cards: sortedCardIndices.reverse() };
         }
 
         return undefined;
@@ -549,7 +575,7 @@ export function getPokerCards(pokerCards: number[]): PokerCards | undefined {
     if (length === 22) {
         if (getStrait(values, 2) != undefined) {
             // 33 44 55 66 77 88 99 TT JJ QQ KK
-            return { type: PokerCardsType.pairStrait, length: length, value: min };
+            return { type: PokerCardsType.pairStrait, length: length, value: min, cards: sortedCardIndices.reverse() };
         }
 
         return undefined;
@@ -585,6 +611,10 @@ export function isGreaterThan(pokerCard: PokerCards, target: PokerCards): boolea
 
     if (pokerCard.type > target.type) {
         return true;
+    }
+
+    if (pokerCard.type < target.type) {
+        return false;
     }
 
     if (pokerCard.value > target.value) {
