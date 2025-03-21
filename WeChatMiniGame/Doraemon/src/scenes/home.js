@@ -5,6 +5,7 @@ import { createBtn, createText } from '../common/ui.js';
 import * as GameServer from '../gameserver.js'
 
 import Debug from '../base/debug.js';
+import { getAccessInfo } from '../common/api.js';
 
 export default class Home extends PIXI.Container {
     /** @type {GameServer} */
@@ -32,13 +33,23 @@ export default class Home extends PIXI.Container {
     appendOpBtn() {
         this.addChild(
             createText({
-                str: ' 打懵' + databus.version,
+                str: '打懵',
                 align: 'center',
                 x: config.GAME_WIDTH / 2,
                 y: config.GAME_HEIGHT / 3,
                 style: {
                     fontSize: 64,
                     fill: "#FFFFFF"
+                }
+            }),
+            createText({
+                str: databus.version,
+                align: 'center',
+                x: config.GAME_WIDTH / 2,
+                y: config.GAME_HEIGHT / 3 + 100,
+                style: {
+                    fontSize: 30,
+                    fill: "#E5E5E5"
                 }
             }),
 
@@ -89,8 +100,29 @@ export default class Home extends PIXI.Container {
         );
     }
 
-    joinRoom(accessInfo) {
+    joinRoom(string) {
         wx.showLoading({ title: '加入房间中' });
+        if (string.length == 4) {
+            getAccessInfo(string, (accessInfo) => {
+                if (accessInfo) {
+                    this.joinRoomWithAccessInfo(accessInfo);
+                } else {
+                    wx.hideLoading();
+                    this.handling = false
+                    console.log('join room failed, invalid passcode ' + string);
+                    wx.showToast({
+                        title: '密码错误！',
+                        icon: 'error',
+                        duration: 2000
+                    })
+                }
+            });
+        } else {
+            this.joinRoomWithAccessInfo(string);
+        }
+    }
+
+    joinRoomWithAccessInfo(accessInfo) {
         this.gameServer.joinRoom(accessInfo, (errCode) => {
             wx.hideLoading();
             this.handling = false

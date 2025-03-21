@@ -3,10 +3,11 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 54;
+	objectVersion = 46;
 	objects = {
 
 /* Begin PBXBuildFile section */
+		8BE36EB1D1BBB0B9A3EFC8D5 /* libPods-Doraemon.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DFD9FB44D397290DFAEED8AD /* libPods-Doraemon.a */; };
 		A4EE9CF31DC101E500E5F812 /* DoraemonPlayerListViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = A4EE9CF21DC101E500E5F812 /* DoraemonPlayerListViewController.m */; };
 		A4EE9CF61DC1042200E5F812 /* DoraemonPlayerCell.m in Sources */ = {isa = PBXBuildFile; fileRef = A4EE9CF51DC1042200E5F812 /* DoraemonPlayerCell.m */; };
 		A4F0677F1DBFB3A700519A98 /* DoraemonPlayer.m in Sources */ = {isa = PBXBuildFile; fileRef = A4F0677E1DBFB3A700519A98 /* DoraemonPlayer.m */; };
@@ -99,9 +100,6 @@
 		B8C2594F1D9943C000101DBF /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = B8C2594E1D9943C000101DBF /* main.m */; };
 		B8C259521D9943C000101DBF /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = B8C259511D9943C000101DBF /* AppDelegate.m */; };
 		B8C2595D1D9943C000101DBF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = B8C2595B1D9943C000101DBF /* LaunchScreen.storyboard */; };
-		B93758C4E03D2704490D19B9 /* libPods-Doraemon.a in Frameworks */ = {isa = PBXBuildFile; fileRef = FAD5CE19C0FE1474130A1A0E /* libPods-Doraemon.a */; };
-		C03398BE2D8342D500776544 /* Schnauzer.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = C03398BD2D8342D500776544 /* Schnauzer.xcframework */; };
-		C03398BF2D8342D500776544 /* Schnauzer.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = C03398BD2D8342D500776544 /* Schnauzer.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -111,7 +109,6 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				C03398BF2D8342D500776544 /* Schnauzer.xcframework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -309,8 +306,7 @@
 		B8C259511D9943C000101DBF /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
 		B8C2595C1D9943C000101DBF /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		B8C2595E1D9943C000101DBF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		C03398BD2D8342D500776544 /* Schnauzer.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = Schnauzer.xcframework; path = ../../../GitHub/Schnauzer/SchnauzerLibrary/Schnauzer_ios_dylib/Schnauzer.xcframework; sourceTree = "<group>"; };
-		FAD5CE19C0FE1474130A1A0E /* libPods-Doraemon.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Doraemon.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		DFD9FB44D397290DFAEED8AD /* libPods-Doraemon.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Doraemon.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -320,19 +316,17 @@
 			files = (
 				B816BF4B1DA76F42002B1461 /* libsqlite3.tbd in Frameworks */,
 				B816BF561DA77F2B002B1461 /* libDayimaCrypt.a in Frameworks */,
-				B93758C4E03D2704490D19B9 /* libPods-Doraemon.a in Frameworks */,
-				C03398BE2D8342D500776544 /* Schnauzer.xcframework in Frameworks */,
+				8BE36EB1D1BBB0B9A3EFC8D5 /* libPods-Doraemon.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		2E921A5B0D87C01B189DB1A4 /* Frameworks */ = {
+		AE9C02FE1B31F7FFEF98211E /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				C03398BD2D8342D500776544 /* Schnauzer.xcframework */,
-				FAD5CE19C0FE1474130A1A0E /* libPods-Doraemon.a */,
+				DFD9FB44D397290DFAEED8AD /* libPods-Doraemon.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -719,7 +713,7 @@
 				B8C2594C1D9943C000101DBF /* Doraemon */,
 				B8C2594B1D9943C000101DBF /* Products */,
 				EDA81B02080B0700E0CADBC8 /* Pods */,
-				2E921A5B0D87C01B189DB1A4 /* Frameworks */,
+				AE9C02FE1B31F7FFEF98211E /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -779,6 +773,7 @@
 				B8C259481D9943C000101DBF /* Resources */,
 				A447B5D18135322AA9BABBED /* [CP] Copy Pods Resources */,
 				C03398C02D8342D500776544 /* Embed Frameworks */,
+				1DC7EFC1832446D76D1E600C /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -837,6 +832,24 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		1DC7EFC1832446D76D1E600C /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-Doraemon/Pods-Doraemon-frameworks.sh",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/Schnauzer_ios_dylib/Schnauzer.framework/Schnauzer",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/Schnauzer.framework",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Doraemon/Pods-Doraemon-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
 		778853AC2F7A6A0108381327 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -866,7 +879,7 @@
 			);
 			inputPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-Doraemon/Pods-Doraemon-resources.sh",
-				"${PODS_ROOT}/../../../../GitHub/Schnauzer/Schnauzer/ios/SNZToolKit/Schnauzer.json",
+				"${PODS_ROOT}/../../../../Schnauzer/Schnauzer/ios/SNZToolKit/Schnauzer.json",
 			);
 			name = "[CP] Copy Pods Resources";
 			outputPaths = (
@@ -1036,7 +1049,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
@@ -1086,7 +1099,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -1106,11 +1119,7 @@
 				ENABLE_BITCODE = NO;
 				GCC_PREFIX_HEADER = Doraemon/Prefix.pch;
 				INFOPLIST_FILE = Doraemon/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/Doraemon/Libraries/Dayima/DayimaCrypt",
@@ -1134,11 +1143,7 @@
 				ENABLE_BITCODE = NO;
 				GCC_PREFIX_HEADER = Doraemon/Prefix.pch;
 				INFOPLIST_FILE = Doraemon/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/Doraemon/Libraries/Dayima/DayimaCrypt",

@@ -3,5 +3,5 @@ source 'https://github.com/CocoaPods/Specs.git'
 target 'Doraemon' do
   platform :ios, '11.0'
 
-  pod 'Schnauzer_ios_dylib', :path => '../../../GitHub/Schnauzer', :subspec => 'configuration'
+  pod 'Schnauzer_ios_dylib', :path => '../../../Schnauzer', :subspec => 'configuration'
 end

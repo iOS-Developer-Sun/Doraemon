@@ -169,6 +169,7 @@ class GameServer {
         this.svrFrameIndex = 0;
         this.hasSetStart = false;
         this.hasGameStart = false;
+        wx.setKeepScreenOn({ keepScreenOn: false });
 
         this.statCount = 0;
         this.avgDelay = 0;
@@ -195,6 +196,7 @@ class GameServer {
             return;
         }
 
+        wx.setKeepScreenOn({ keepScreenOn: true });
         this.hasGameStart = true;
         console.log('onGameStart');
         this.event.emit('onGameStart');
@@ -302,10 +304,12 @@ class GameServer {
         const memberList = roomInfo.memberList || [];
         for (let i = 0; i < memberList.length; i++) {
             var member = memberList[i];
+            if (member.role == config.roleMap.owner) {
+                databus.ownerPosNum = member.posNum;
+            }
             if (databus.selfClientId === member.clientId) {
                 databus.isOwner = member.role == config.roleMap.owner;
                 databus.selfPosNum = member.posNum;
-                break;
             }
         }
         this.event.emit('onRoomInfoChange', roomInfo);
@@ -336,6 +340,8 @@ class GameServer {
                                         this.onRoomInfoChange(res.data.roomInfo);
                                         this.reconnectMaxFrameId = connectRes.maxFrameId || 0;
                                         this.reconnecting = true;
+
+                                        databus.isFromReconnection = true;
 
                                         // 手动调用onGameStart模拟正常开局
                                         this.onGameStart('人工');
@@ -425,13 +431,13 @@ class GameServer {
 
     requestGameSet() {
         this.broadcast({
-            action: "ASKGAMESET",
+            action: "REQUESTGAMESET",
         })
     }
 
     respondGameSet(receiver) {
         this.broadcast({
-            action: "ANSWERGAMESET",
+            action: "RESPONDGAMESET",
             data: databus.gameSet
         }, [receiver]);
     }

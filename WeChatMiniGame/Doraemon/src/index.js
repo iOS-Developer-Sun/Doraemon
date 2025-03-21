@@ -21,7 +21,7 @@ export default class App extends PIXI.Application {
             point.y = y * 2 * (375 / window.innerHeight);
         };
 
-        // this.aniId    = null;
+        // this.aniId = null;
         // this.bindLoop = this.loop.bind(this);
 
         config.resources.forEach(item => PIXI.loader.add(item));

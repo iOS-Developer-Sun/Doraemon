@@ -11,7 +11,8 @@
             "disablePlugins": [],
             "outputPath": ""
         },
-        "useCompilerPlugins": false
+        "useCompilerPlugins": false,
+        "uglifyFileName": false
     },
     "compileType": "game",
     "libVersion": "latest",
@@ -25,5 +26,8 @@
     "editorSetting": {
         "tabIndent": "insertSpaces",
         "tabSize": 4
+    },
+    "scripts": {
+        "beforeCompile": "sh precompilation.sh"
     }
 }

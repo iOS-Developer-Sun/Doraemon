@@ -65,5 +65,11 @@ export default {
         byValue: 0,
         byCount: 1,
     },
+
+    panAction: {
+        notDetermined: 0,
+        selecting: 1,
+        repositioning: 2,
+    },
 }
 

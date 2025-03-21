@@ -6,7 +6,6 @@
         "strict": true
     },
     "include": [
-        "minigame",
-        "typings"
+        "ts"
     ]
 }

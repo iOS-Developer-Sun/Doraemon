@@ -10,12 +10,11 @@ exports.pokerCardValueString = pokerCardValueString;
 exports.pokerCardString = pokerCardString;
 exports.isRedJokerCard = isRedJokerCard;
 exports.isRedJoker = isRedJoker;
-exports.hasRedJoker = hasRedJoker;
-exports.hasRedJokers = hasRedJokers;
 exports.getPokerCards = getPokerCards;
 exports.isGreaterThan = isGreaterThan;
 exports.getCardScore = getCardScore;
 exports.getCardsScore = getCardsScore;
+exports.getJokersCount = getJokersCount;
 var PokerCardSuit;
 (function (PokerCardSuit) {
     PokerCardSuit[PokerCardSuit["club"] = 0] = "club";
@@ -151,12 +150,6 @@ function isRedJokerCard(card) {
 function isRedJoker(index) {
     return isRedJokerCard(pokerCard(index));
 }
-function hasRedJoker(cards) {
-    return cards.indexOf(106) != -1 || cards.indexOf(107) != -1;
-}
-function hasRedJokers(cards) {
-    return cards.indexOf(106) != -1 && cards.indexOf(107) != -1;
-}
 function getStrait(sortedValues, width) {
     if (sortedValues[sortedValues.length - 1] > PokerCardValue.ace) {
         return undefined;
@@ -217,7 +210,7 @@ function getThreeWithTwoStrait(sortedCardIndices, length) {
         for (var i_1 = 0; i_1 < keys.length; i_1++) {
             var key = keys[i_1];
             var remaining = valueCount[key].slice();
-            if (majorKeys.includes(key)) {
+            if (majorKeys.indexOf(key) != -1) {
                 majors[key] = remaining.splice(remaining.length - 3, remaining.length);
             }
             if (remaining.length > 0) {
@@ -267,7 +260,7 @@ function getPokerCards(pokerCards) {
     if (length === 0) {
         return undefined;
     }
-    var sortedCardIndices = pokerCards.sort(function (a, b) { return a - b; });
+    var sortedCardIndices = pokerCards.slice().sort(function (a, b) { return a - b; });
     var cards = sortedCardIndices.map(function (index) { return pokerCard(index); });
     var suits = cards.map(function (card) { return card.suit; });
     var values = cards.map(function (card) { return card.value; });
@@ -542,4 +535,14 @@ function getCardsScore(cards) {
         score += getCardScore(card);
     }
     return score;
+}
+function getJokersCount(cards) {
+    var jokersCount = 0;
+    for (var index = 0; index < cards.length; index++) {
+        var card = cards[index];
+        if (isRedJoker(card)) {
+            jokersCount++;
+        }
+    }
+    return jokersCount;
 }

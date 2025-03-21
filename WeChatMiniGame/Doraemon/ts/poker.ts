@@ -161,14 +161,6 @@ export function isRedJoker(index: number): boolean {
     return isRedJokerCard(pokerCard(index));
 }
 
-export function hasRedJoker(cards: number[]): boolean {
-    return cards.indexOf(106) != -1 || cards.indexOf(107) != -1;
-}
-
-export function hasRedJokers(cards: number[]): boolean {
-    return cards.indexOf(106) != -1 && cards.indexOf(107) != -1;
-}
-
 export interface PokerCards {
     type: PokerCardsType;
     length: number;
@@ -250,7 +242,7 @@ function getThreeWithTwoStrait(sortedCardIndices: number[], length: number): Thr
         for (let i = 0; i < keys.length; i++) {
             let key = keys[i];
             let remaining = valueCount[key].slice();
-            if (majorKeys.includes(key)) {
+            if (majorKeys.indexOf(key) != -1) {
                 majors[key] = remaining.splice(remaining.length - 3, remaining.length);
             }
 
@@ -300,7 +292,7 @@ export function getPokerCards(pokerCards: number[]): PokerCards | undefined {
         return undefined;
     }
 
-    let sortedCardIndices = pokerCards.sort((a, b) => a - b);
+    let sortedCardIndices = pokerCards.slice().sort((a, b) => a - b);
     let cards = sortedCardIndices.map((index: number) => pokerCard(index));
     let suits = cards.map((card: PokerCard) => card.suit);
     let values = cards.map((card: PokerCard) => card.value);
@@ -624,7 +616,7 @@ export function isGreaterThan(pokerCard: PokerCards, target: PokerCards): boolea
     return false;
 }
 
-export function getCardScore(index) {
+export function getCardScore(index: number) {
     let score = 0;
     let card = pokerCard(index);
     let value = card.value
@@ -636,11 +628,22 @@ export function getCardScore(index) {
     return score;
 }
 
-export function getCardsScore(cards) {
+export function getCardsScore(cards: number[]) {
     let score = 0;
     for (let index = 0; index < cards.length; index++) {
         const card = cards[index];
         score += getCardScore(card);
     }
     return score;
+}
+
+export function getJokersCount(cards: number[]) {
+    let jokersCount = 0;
+    for (let index = 0; index < cards.length; index++) {
+        const card = cards[index];
+        if (isRedJoker(card)) {
+            jokersCount++;
+        }
+    }
+    return jokersCount;
 }
