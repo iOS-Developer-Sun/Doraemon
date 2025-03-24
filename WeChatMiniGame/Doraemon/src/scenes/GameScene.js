@@ -989,10 +989,10 @@ export default class GameScene extends PIXI.Container {
             scrollContainer.y = Math.min(0, Math.max(newY, -scrollContainer.height + scrollContainer.drmScrollViewHeight));
         });
 
-        scrollView.on('pointerup', () => { 
+        scrollView.on('pointerup', () => {
             isDragging = false;
         });
-        scrollView.on('pointerupoutside', () => { 
+        scrollView.on('pointerupoutside', () => {
             isDragging = false;
         });
     }

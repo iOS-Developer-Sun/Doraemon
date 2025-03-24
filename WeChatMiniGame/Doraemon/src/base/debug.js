@@ -1,4 +1,4 @@
-import * as PIXI  from '../../libs/pixi.js';
+import * as PIXI from '../../libs/pixi.js';
 import config from '../config.js';
 
 import {
@@ -11,16 +11,16 @@ export default class Battle extends PIXI.Container {
     }
 
     updateDebugMsg(msgArr = []) {
-        if ( this.box ) {
+        if (this.box) {
             this.removeChild(this.box);
         }
 
-        if ( !msgArr.length ) {
+        if (!msgArr.length) {
             return;
         }
 
         const w = 465;
-        const font    = 22;
+        const font = 22;
         const h = 108;
 
         let box = new PIXI.Container();

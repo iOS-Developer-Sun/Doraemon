@@ -13,10 +13,13 @@ export default class App extends PIXI.Application {
     constructor() {
         super(config.windowWidth, config.windowHeight, config.pixiOptions);
 
-        console.log(config.windowWidth, config.windowHeight, config.safeArea);
+        this.updateWindowInfo();
+        wx.onDeviceOrientationChange((res) => {
+            console.log('deviceOrientationChange', res);
+            this.updateWindowInfo();
+        });
 
         this.bindWxEvents();
-
         this.renderer.plugins.interaction.mapPositionToPoint = (point, x, y) => {
             point.x = x;
             point.y = y;
@@ -28,6 +31,22 @@ export default class App extends PIXI.Application {
         // config.resources.forEach(item => PIXI.loader.add(item));
         // PIXI.loader.load(this.init.bind(this));
         this.init();
+    }
+
+    updateWindowInfo() {
+        const windowInfo = wx.getWindowInfo();
+        config.safeArea = windowInfo.safeArea ? {
+            left: windowInfo.safeArea.left,
+            right: windowInfo.windowWidth - windowInfo.safeArea.right,
+            top: windowInfo.safeArea.top,
+            bottom: windowInfo.windowHeight - windowInfo.safeArea.bottom,
+        } : {
+            left: 0,
+            right: 0,
+            top: 0,
+            bottom: 0
+        };
+        console.log(config.windowWidth, config.windowHeight, config.safeArea);
     }
 
     runScene(Scene) {

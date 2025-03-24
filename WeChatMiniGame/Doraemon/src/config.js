@@ -4,7 +4,6 @@ import {
 } from './common/util.js';
 
 const deviceinfo = getDeviceInfo();
-const windowinfo = wx.getWindowInfo();
 
 export default {
     windowWidth: deviceinfo.windowWidth,
@@ -29,12 +28,7 @@ export default {
     },
 
     deviceinfo,
-    safeArea: windowinfo.safeArea ? {
-        left: windowinfo.safeArea.left,
-        right: deviceinfo.windowWidth - windowinfo.safeArea.right,
-        top: windowinfo.safeArea.top,
-        bottom: deviceinfo.windowHeight - windowinfo.safeArea.bottom,
-    } : {
+    safeArea: {
         left: 0,
         right: 0,
         top: 0,

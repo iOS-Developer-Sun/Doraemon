@@ -181,7 +181,7 @@ export function getAccessInfo(passcode, callback) {
 
     let accessInfo = null;
     for (const key in accessInfoMap) {
-      const item = accessInfoMap[key];  
+      const item = accessInfoMap[key];
       if (passcode == item.passcode) {
         accessInfo = key;
         break;

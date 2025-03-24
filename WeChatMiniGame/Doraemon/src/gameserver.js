@@ -255,12 +255,12 @@ class GameServer {
 
         if (!this.reconnecting) {
             // (res.actionList || []).forEach(oneFrame => {
-                // let obj = JSON.parse(oneFrame);
-                // console.log('onSyncFrame: ' + oneFrame);
-                // if (obj.e === config.msg.STAT && obj.id === databus.selfClientId) {
-                //     this.delay = new Date() - obj.t;
-                //     this.avgDelay = ((this.avgDelay * (obj.c - 1)) + this.delay) / obj.c;
-                // }
+            // let obj = JSON.parse(oneFrame);
+            // console.log('onSyncFrame: ' + oneFrame);
+            // if (obj.e === config.msg.STAT && obj.id === databus.selfClientId) {
+            //     this.delay = new Date() - obj.t;
+            //     this.avgDelay = ((this.avgDelay * (obj.c - 1)) + this.delay) / obj.c;
+            // }
             // });
         }
 
