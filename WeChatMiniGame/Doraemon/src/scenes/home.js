@@ -31,73 +31,80 @@ export default class Home extends PIXI.Container {
     }
 
     appendOpBtn() {
-        this.addChild(
-            createText({
-                str: '打懵',
-                align: 'center',
-                x: config.GAME_WIDTH / 2,
-                y: config.GAME_HEIGHT / 3,
-                style: {
-                    fontSize: 64,
-                    fill: "#FFFFFF"
-                }
-            }),
-            createText({
-                str: databus.version,
-                align: 'center',
-                x: config.GAME_WIDTH / 2,
-                y: config.GAME_HEIGHT / 3 + 100,
-                style: {
-                    fontSize: 30,
-                    fill: "#E5E5E5"
-                }
-            }),
+        const title = createText({
+            str: '打懵',
+            align: 'center',
+            x: config.windowWidth / 2,
+            y: config.windowHeight / 3,
+            style: {
+                fontSize: 44,
+                fill: "#FFFFFF"
+            }
+        });
+        this.addChild(title);
 
-            createBtn({
-                text: '创建房间',
-                img: 'images/btn_bg.png',
-                x: config.GAME_WIDTH / 2 - 100,
-                y: 582,
-                onclick: () => {
-                    if (this.handling) {
-                        return;
-                    }
-                    this.handling = true
-                    wx.showLoading({
-                        title: '房间创建中...',
-                    })
-                    this.gameServer.createRoom({
-                        maxMemberNum: databus.max_players_count
-                    }, (errCode) => {
-                        wx.hideLoading();
-                        this.handling = false;
-                    });
+        const version = createText({
+            str: databus.version,
+            align: 'center',
+            x: config.windowWidth / 2,
+            y: config.windowHeight / 3 + 50,
+            style: {
+                fontSize: 10,
+                fill: "#E5E5E5"
+            }
+        });
+        this.addChild(version);
+
+        const createRoomButton = createBtn({
+            text: '创建房间',
+            img: 'images/btn_bg.png',
+            x: config.windowWidth / 2 - 100,
+            y: config.windowHeight / 3 * 2,
+            width: 112,
+            height: 44,
+            onclick: () => {
+                if (this.handling) {
+                    return;
                 }
-            }),
+                this.handling = true
+                wx.showLoading({
+                    title: '房间创建中...',
+                })
+                this.gameServer.createRoom({
+                    maxMemberNum: databus.max_players_count
+                }, (errCode) => {
+                    wx.hideLoading();
+                    this.handling = false;
+                });
+            }
+        });
+        this.addChild(createRoomButton);
 
-            createBtn({
-                text: '加入房间',
-                img: 'images/btn_bg.png',
-                x: config.GAME_WIDTH / 2 + 100,
-                y: 582,
-                onclick: () => {
-                    if (this.handling) {
-                        return;
-                    }
-
-                    this.handling = true;
-
-                    wx.onKeyboardConfirm(this.keyboardConfirmListener);
-                    wx.showKeyboard({
-                        defaultValue: '',
-                        maxLength: 64,
-                        multiple: false,
-                        confirmHold: false,
-                        confirmType: 'go'
-                    })
+        const joinRoomButton = createBtn({
+            text: '加入房间',
+            img: 'images/btn_bg.png',
+            x: config.windowWidth / 2 + 100,
+            y: config.windowHeight / 3 * 2,
+            width: 112,
+            height: 44,
+            onclick: () => {
+                if (this.handling) {
+                    return;
                 }
-            })
-        );
+
+                this.handling = true;
+
+                wx.onKeyboardConfirm(this.keyboardConfirmListener);
+                wx.showKeyboard({
+                    defaultValue: '',
+                    maxLength: 64,
+                    multiple: false,
+                    confirmHold: false,
+                    confirmType: 'go'
+                })
+            }
+        });
+        this.addChild(joinRoomButton);
     }
 
     joinRoom(string) {

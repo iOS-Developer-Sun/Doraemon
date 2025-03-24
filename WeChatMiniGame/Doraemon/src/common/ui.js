@@ -25,7 +25,7 @@ export function createBtn(options) {
         _text.anchor.set(0.5);
 
         btn.addChild(_text);
-        btn.titleLabel = _text;
+        btn.drmTitleLabel = _text;
     }
 
     return btn;

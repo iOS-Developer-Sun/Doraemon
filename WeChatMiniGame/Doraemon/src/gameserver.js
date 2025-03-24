@@ -254,14 +254,14 @@ class GameServer {
         this.frames.push(res);
 
         if (!this.reconnecting) {
-            (res.actionList || []).forEach(oneFrame => {
-                let obj = JSON.parse(oneFrame);
-                console.log('onSyncFrame: ' + oneFrame);
-                if (obj.e === config.msg.STAT && obj.id === databus.selfClientId) {
-                    this.delay = new Date() - obj.t;
-                    this.avgDelay = ((this.avgDelay * (obj.c - 1)) + this.delay) / obj.c;
-                }
-            });
+            // (res.actionList || []).forEach(oneFrame => {
+                // let obj = JSON.parse(oneFrame);
+                // console.log('onSyncFrame: ' + oneFrame);
+                // if (obj.e === config.msg.STAT && obj.id === databus.selfClientId) {
+                //     this.delay = new Date() - obj.t;
+                //     this.avgDelay = ((this.avgDelay * (obj.c - 1)) + this.delay) / obj.c;
+                // }
+            // });
         }
 
         if (this.frames.length > this.frameJitLenght) {
@@ -368,7 +368,7 @@ class GameServer {
         this.server.createRoom({
             maxMemberNum: options.maxMemberNum || 2,
             startPercent: options.startPercent || 0,
-            gameLastTime: 3600,    
+            gameLastTime: 3600,
             needUserInfo: true,
             success: (res) => {
                 const data = res.data || {};
@@ -546,29 +546,29 @@ class GameServer {
     }
 
     execFrame() {
-        let frame = this.frames.shift();
+        // let frame = this.frames.shift();
 
         // 每次执行逻辑帧，将指令同步后，演算游戏状态
         // databus.gameInstance.logicUpdate(this.frameInterval, frame.frameId);
 
-        (frame.actionList || []).forEach(oneFrame => {
-            let obj = JSON.parse(oneFrame);
+        // (frame.actionList || []).forEach(oneFrame => {
+        // let obj = JSON.parse(oneFrame);
 
-            switch (obj.e) {
-                case config.msg.SHOOT:
-                    databus.playerMap[obj.n].shoot();
-                    break;
+        // switch (obj.e) {
+        //     case config.msg.SHOOT:
+        //         databus.playerMap[obj.n].shoot();
+        //         break;
 
-                case config.msg.MOVE_DIRECTION:
-                    databus.playerMap[obj.n].setDestDegree(obj.d);
-                    break;
+        //     case config.msg.MOVE_DIRECTION:
+        //         databus.playerMap[obj.n].setDestDegree(obj.d);
+        //         break;
 
-                case config.msg.MOVE_STOP:
-                    databus.playerMap[obj.n].setSpeed(0);
-                    databus.playerMap[obj.n].desDegree = databus.playerMap[obj.n].frameDegree;
-                    break;
-            }
-        });
+        //     case config.msg.MOVE_STOP:
+        //         databus.playerMap[obj.n].setSpeed(0);
+        //         databus.playerMap[obj.n].desDegree = databus.playerMap[obj.n].frameDegree;
+        //         break;
+        // }
+        // });
 
         // databus.gameInstance.preditUpdate(this.frameInterval);
     }

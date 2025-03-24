@@ -21,10 +21,10 @@ export default class Room extends PIXI.Container {
         let titleLabel = createText({
             str: '请就座。',
             align: 'center',
-            x: config.GAME_WIDTH / 2,
-            y: config.GAME_HEIGHT / 3,
+            x: config.windowWidth / 2,
+            y: config.windowHeight / 4,
             style: {
-                fontSize: 64,
+                fontSize: 30,
                 fill: "#FFFFFF"
             }
         });
@@ -53,8 +53,10 @@ export default class Room extends PIXI.Container {
     appendBackBtn() {
         const back = createBtn({
             img: 'images/goBack.png',
-            x: 104,
-            y: 68,
+            x: 60 + config.safeArea.left,
+            y: 42,
+            width: 120,
+            height: 44,
             onclick: () => {
                 wx.showModal({
                     title: '温馨提示',
@@ -78,8 +80,10 @@ export default class Room extends PIXI.Container {
     appendOpBtn() {
         let startButton = createBtn({
             img: 'images/start.png',
-            x: config.GAME_WIDTH / 2,
-            y: config.GAME_HEIGHT / 2,
+            x: config.windowWidth / 2,
+            y: config.windowHeight / 2,
+            width: 112,
+            height: 44,
             onclick: () => {
                 if (!this.allReady) {
                     showTip('全部玩家准备后方可开始');
@@ -98,18 +102,13 @@ export default class Room extends PIXI.Container {
 
         let invite = createBtn({
             img: 'images/default_user.png',
-            width: 100,
-            height: 100,
-            x: config.GAME_WIDTH - 100,
-            y: config.GAME_HEIGHT - 100,
+            width: 44,
+            height: 44,
+            x: config.windowWidth - 166,
+            y: config.windowHeight - 66,
             onclick: () => {
                 console.log('invite:' + databus.currAccessInfo);
                 wx.setClipboardData({ data: databus.currAccessInfo });
-                // wx.shareAppMessage({
-                //     title: '邀请好友',
-                //     query: 'accessInfo=' + this.gameServer.accessInfo,
-                //     imageUrl: 'https://res.wx.qq.com/wechatgame/product/luban/assets/img/sprites/bk.jpg',
-                // });
             }
         });
 
@@ -136,30 +135,33 @@ export default class Room extends PIXI.Container {
     }
 
     createOneUser(index) {
-        let imageWidth = 100;
+        let length = 44;
         let playerView = new PIXI.Container();
-        playerView.width = imageWidth;
-        playerView.height = imageWidth;
+        playerView.width = length;
+        playerView.height = length;
         this.addChild(playerView);
         this.playerViews.push(playerView);
 
         let avatar = new PIXI.Sprite();
         avatar.x = 0;
         avatar.y = 0;
-        avatar.width = imageWidth;
-        avatar.height = imageWidth;
+        avatar.width = length;
+        avatar.height = length;
         playerView.addChild(avatar);
         playerView.drmAvatar = avatar;
 
-        let name = new PIXI.Text('(空位)', { fontSize: 30, align: 'center', fill: "#FFFFFF" });
+        let name = new PIXI.Text('(空位)', { fontSize: 10, align: 'center', fill: "#FFFFFF" });
         name.x = 0;
-        name.y = imageWidth + 5;
+        name.y = length + 2;
         playerView.addChild(name);
         playerView.drmName = name;
 
         const host = new PIXI.Sprite.from("images/hosticon.png");
         host.scale.set(.8);
-        host.y = -30;
+        host.width = 40;
+        host.height = 13;
+        host.x = 0;
+        host.y = -15;
         host.visible = false;
         playerView.addChild(host);
         playerView.drmHost = host;
@@ -173,24 +175,24 @@ export default class Room extends PIXI.Container {
     }
 
     position(index) {
-        const imageWidth = 100;
-        let x;
-        let y;
+        const length = 44;
+        let x = 0;
+        let y = 0;
         if (index === 0) {
-            x = (config.GAME_WIDTH - imageWidth) / 2;
-            y = config.GAME_HEIGHT - imageWidth - 100;
+            x = (config.windowWidth - length) / 2;
+            y = config.windowHeight - length - config.safeArea.left;
         } else if (index === 1) {
-            x = config.GAME_WIDTH - imageWidth - 100;
-            y = 300;
+            x = config.windowWidth - length - config.safeArea.left;
+            y = config.windowHeight / 3 * 2;
         } else if (index === 2) {
-            x = config.GAME_WIDTH - imageWidth - 100;
-            y = 100;
+            x = config.windowWidth - length - config.safeArea.left;
+            y = config.windowHeight / 3;
         } else if (index === 3) {
-            x = 100;
-            y = 100;
+            x = config.safeArea.left;
+            y = config.windowHeight / 3;
         } else {
-            x = 100;
-            y = 300;
+            x = config.safeArea.left;
+            y = config.windowHeight / 3 * 2;
         }
         return { x, y };
     }

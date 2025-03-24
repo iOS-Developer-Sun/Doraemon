@@ -65,8 +65,10 @@ export default class GameScene extends PIXI.Container {
     appendBackBtn() {
         const back = createBtn({
             img: 'images/goBack.png',
-            x: 104,
-            y: 68,
+            x: 60 + config.safeArea.left,
+            y: 42,
+            width: 120,
+            height: 44,
             onclick: () => {
                 this.showModal('离开房间会游戏结束！你确定吗？')
             }
@@ -85,15 +87,15 @@ export default class GameScene extends PIXI.Container {
     }
 
     initViews() {
-        const w = 465;
-        const font = 22;
-        const h = 108;
+        const w = 300;
+        const font = 14;
+        const h = 60;
 
         let box = new PIXI.Container();
         this.box = box;
         this.addChild(box);
-        box.x = (config.GAME_WIDTH - w) / 2;
-        box.y = 52;
+        box.x = (config.windowWidth - w) / 2;
+        box.y = 20;
         box.width = w;
         box.height = h + 4;
 
@@ -125,15 +127,15 @@ export default class GameScene extends PIXI.Container {
     }
 
     initOpartions() {
-        const y = config.GAME_HEIGHT - 350;
+        const y = config.windowHeight - 180;
 
         this.newGameButton = createBtn({
             img: 'images/btn_bg.png',
             text: '开始',
-            x: config.GAME_WIDTH / 2 - 50,
+            x: config.windowWidth / 2,
             y: y,
-            width: 178,
-            height: 70,
+            width: 122,
+            height: 44,
             onclick: () => {
                 this.newGame();
             }
@@ -144,10 +146,10 @@ export default class GameScene extends PIXI.Container {
         this.playButton = createBtn({
             img: 'images/btn_bg.png',
             text: '出牌',
-            x: config.GAME_WIDTH / 2 - 50,
+            x: config.windowWidth / 2,
             y: y,
-            width: 178,
-            height: 70,
+            width: 122,
+            height: 44,
             onclick: () => {
                 this.playButtonDidClick();
             }
@@ -158,10 +160,10 @@ export default class GameScene extends PIXI.Container {
         this.announceButton = createBtn({
             img: 'images/btn_bg.png',
             text: '宣',
-            x: config.GAME_WIDTH / 2 - 50,
+            x: config.windowWidth / 2,
             y: y,
-            width: 178,
-            height: 70,
+            width: 122,
+            height: 44,
             onclick: () => {
                 this.announceButtonDidClick();
             }
@@ -173,10 +175,10 @@ export default class GameScene extends PIXI.Container {
         this.selectAllButton = createBtn({
             img: 'images/btn_bg.png',
             text: '全选',
-            x: config.GAME_WIDTH / 2 - 50 - 200,
+            x: config.windowWidth / 2 - 200,
             y: y,
-            width: 178,
-            height: 70,
+            width: 122,
+            height: 44,
             onclick: () => {
                 this.selectAllButtonDidClick();
             }
@@ -188,10 +190,10 @@ export default class GameScene extends PIXI.Container {
         this.passButton = createBtn({
             img: 'images/btn_bg.png',
             text: '不要',
-            x: config.GAME_WIDTH / 2 - 50 + 200,
+            x: config.windowWidth / 2 + 200,
             y: y,
-            width: 178,
-            height: 70,
+            width: 122,
+            height: 44,
             onclick: () => {
                 this.passButtonDidClick();
             }
@@ -204,15 +206,17 @@ export default class GameScene extends PIXI.Container {
         /** @type {PIXI.Container} */
         let cardsContainerView = new PIXI.Container({ fill: 0xFF0000 })
         const safeAreaBottom = 34;
-        const cardHeight = 200;
+        const cardHeight = 100;
         const selectedOffset = cardHeight * 0.2;
+        const containerLeftMargin = 100;
+        const containerRightMargin = 100;
 
         const cardsContainerViewHeight = cardHeight + safeAreaBottom + selectedOffset;
-        const cardsContainerViewWidth = config.GAME_WIDTH - 400;
+        const cardsContainerViewWidth = config.windowWidth - containerLeftMargin - containerRightMargin;
         cardsContainerView.width = cardsContainerViewWidth;
         cardsContainerView.height = cardsContainerViewHeight;
-        cardsContainerView.x = 200;
-        cardsContainerView.y = config.GAME_HEIGHT - cardsContainerViewHeight;
+        cardsContainerView.x = containerLeftMargin;
+        cardsContainerView.y = config.windowHeight - cardsContainerViewHeight;
         cardsContainerView.interactive = true;
         this.cardsContainerView = cardsContainerView;
         this.addChild(cardsContainerView);
@@ -239,30 +243,26 @@ export default class GameScene extends PIXI.Container {
 
         cardsContainerView.drmPan = pan;
 
-        cardsContainerView.on("pointerdown", (event) => {
+        cardsContainerView.on('pointerdown', (event) => {
             this.cardsContainerViewPointerDown(event);
         });
 
-        cardsContainerView.on("pointermove", (event) => {
+        cardsContainerView.on('pointermove', (event) => {
             this.cardsContainerViewPointerMove(event);
         });
 
-        cardsContainerView.on("pointerup", (event) => {
+        cardsContainerView.on('pointerup', (event) => {
             this.cardsContainerViewPointerUp(event);
         });
 
-        cardsContainerView.on("pointerupoutside", (event) => {
+        cardsContainerView.on('pointerupoutside', (event) => {
             this.cardsContainerViewPointerUp(event);
         });
     }
 
     initPlayer() {
-        console.log('initPlayer');
-
         let memberList = this.gameServer.roomInfo.memberList || [];
-
         var players = createArray(databus.max_players_count);
-
         if (databus.testMode) {
             memberList.forEach((member) => {
                 players[member.posNum] = member;
@@ -290,73 +290,75 @@ export default class GameScene extends PIXI.Container {
     }
 
     createOneUser(index, member) {
-        var nickname = member.nickname;
-        var headimg = member.headimg;
-
-        let imageWidth = 100;
-        let playerView = new PIXI.Container();
-        playerView.width = imageWidth;
-        playerView.height = imageWidth;
-        if (index === 0) {
-            playerView.x = 100;
-            playerView.y = config.GAME_HEIGHT - imageWidth - 100;
-        } else if (index === 1) {
-            playerView.x = config.GAME_WIDTH - imageWidth - 100;
-            playerView.y = 300;
-        } else if (index === 2) {
-            playerView.x = config.GAME_WIDTH - imageWidth - 100;
-            playerView.y = 100;
-        } else if (index === 3) {
-            playerView.x = 100;
-            playerView.y = 100;
+        let length = 44;
+        let x = 0;
+        let y = 0;
+        if (index == 0) {
+            x = config.safeArea.left;
+            y = config.windowHeight - length - 100;
+        } else if (index == 1) {
+            x = config.windowWidth - length - config.safeArea.right;
+            y = config.windowHeight / 5 * 2;
+        } else if (index == 2) {
+            x = config.windowWidth - length - config.safeArea.right;
+            y = 64;
+        } else if (index == 3) {
+            x = config.safeArea.left;
+            y = 64;
         } else {
-            playerView.x = 100;
-            playerView.y = 300;
+            x = config.safeArea.left;
+            y = config.windowHeight / 5 * 2;
         }
+
+        let playerView = new PIXI.Container();
+        playerView.x = x;
+        playerView.y = y;
+        playerView.width = length;
+        playerView.height = length;
         this.addChild(playerView);
         this.playerViews[index] = playerView;
 
-        let avatar = new PIXI.Sprite.from(headimg);
+        let avatar = new PIXI.Sprite.from(member.headimg);
         avatar.x = 0;
         avatar.y = 0;
-        avatar.width = imageWidth;
-        avatar.height = imageWidth;
+        avatar.width = length;
+        avatar.height = length;
         avatar.interactive = false;
         playerView.addChild(avatar);
         playerView.drmAvatar = avatar;
 
-        let name = new PIXI.Text(nickname, { fontSize: 30, align: 'center', fill: 0x515151 });
-        name.x = 0;
-        name.y = imageWidth + 5;
-        playerView.addChild(name);
-        playerView.drmName = name;
+        let nameLabel = new PIXI.Text(member.nickname, { fontSize: 14, align: 'center', fill: 0x515151 });
+        nameLabel.x = 0;
+        nameLabel.y = length + 2;
+        playerView.addChild(nameLabel);
+        playerView.drmNameLabel = nameLabel;
 
-        let jokerSign = new PIXI.Sprite.from('images/cards/red_joker.png');
-        jokerSign.width = 40;
-        jokerSign.height = 70;
+        let jokerSign = new PIXI.Sprite.from('images/cards/54.png');
+        jokerSign.width = 22.5;
+        jokerSign.height = 30;
         jokerSign.x = 0;
-        jokerSign.y = - 100;
+        jokerSign.y = - 32;
         jokerSign.visible = false;
         playerView.addChild(jokerSign);
         playerView.drmJokerSign = jokerSign;
 
-        let jokerSign2 = new PIXI.Sprite.from('images/cards/red_joker.png');
-        jokerSign2.width = 40;
-        jokerSign2.height = 70;
-        jokerSign2.x = 50;
-        jokerSign2.y = - 100;
+        let jokerSign2 = new PIXI.Sprite.from('images/cards/54.png');
+        jokerSign.width = 22.5;
+        jokerSign.height = 30;
+        jokerSign2.x = 22;
+        jokerSign2.y = - 32;
         jokerSign2.visible = false;
         playerView.addChild(jokerSign2);
         playerView.drmJokerSign2 = jokerSign2;
 
         let winnerIndexView = createText({
             str: '',
-            style: { fontSize: 28, align: "center", fill: "#FFFF00" },
+            style: { fontSize: 14, align: "center", fill: "#FFFF00" },
             left: true,
             x: 0,
             y: 0,
-            width: imageWidth,
-            height: imageWidth
+            width: length,
+            height: length
         });
         winnerIndexView.visible = false;
         playerView.addChild(winnerIndexView);
@@ -364,30 +366,30 @@ export default class GameScene extends PIXI.Container {
 
         let scoreLabel = createText({
             str: '',
-            style: { fontSize: 28, align: "center", fill: "#FFFF00" },
+            style: { fontSize: 14, align: "center", fill: "#00FFFF" },
             left: true,
             x: 0,
-            y: imageWidth + 50,
-            width: imageWidth
+            y: length + 20,
+            width: length
         });
         scoreLabel.visible = false;
         playerView.addChild(scoreLabel);
         playerView.drmScoreLabel = scoreLabel;
 
         let cardBack = new PIXI.Sprite.from('images/cards/back.png');
-        cardBack.width = 90;
-        cardBack.height = 120;
-        if (index === 1) {
-            cardBack.x = - 100;
+        cardBack.width = 40;
+        cardBack.height = 60;
+        if (index == 1) {
+            cardBack.x = - 50;
             cardBack.y = 0;
-        } else if (index === 2) {
-            cardBack.x = - 100;
+        } else if (index == 2) {
+            cardBack.x = - 50;
             cardBack.y = 0;
-        } else if (index === 3) {
-            cardBack.x = 100;
+        } else if (index == 3) {
+            cardBack.x = 50;
             cardBack.y = 0;
         } else {
-            cardBack.x = 100;
+            cardBack.x = 50;
             cardBack.y = 0;
         }
         playerView.addChild(cardBack);
@@ -400,28 +402,6 @@ export default class GameScene extends PIXI.Container {
                 this.test(index);
             });
         }
-    }
-
-    createPlayerInformation(hp, nickname, isName, fn) {
-        let name, value;
-        isName &&
-            (name = createText({
-                str: nickname,
-                style: { fontSize: 28, align: "center", fill: "#1D1D1D" },
-                left: true,
-                x: hp.graphics.x,
-                y: 96
-            }));
-        value = createText({
-            str: "生命值：",
-            style: {
-                fontSize: 24,
-                fill: "#383838"
-            },
-            y: hp.graphics.y + hp.graphics.height / 2
-        });
-
-        fn(name, value);
     }
 
     renderUpdate(dt) {
@@ -497,7 +477,7 @@ export default class GameScene extends PIXI.Container {
                 currentGame.state = config.gameState.playing;
                 currentGame.currentPlayer = sender;
             }
-            this.gameServer.uploadGameSet();
+            this.uploadGameSet();
             return;
         }
 
@@ -526,12 +506,17 @@ export default class GameScene extends PIXI.Container {
 
     pass() {
         databus.gameSet.pass();
-        this.gameServer.uploadGameSet();
+        this.uploadGameSet();
     }
 
     playCards(cards) {
         databus.gameSet.playCards(cards);
+        this.uploadGameSet();
+    }
+
+    uploadGameSet() {
         this.gameServer.uploadGameSet();
+        wx.triggerGC();
     }
 
     preditUpdate(dt) {
@@ -573,9 +558,9 @@ export default class GameScene extends PIXI.Container {
 
     refreshRepositioningCardViews(cardViews) {
         const pan = this.cardsContainerView.drmPan;
-        const offset = 40;
-        const cardHeight = 200;
-        const cardWidth = cardHeight * 250 / 363;
+        const offset = 25;
+        const cardHeight = 100;
+        const cardWidth = cardHeight * 225 / 300;
 
         cardViews.forEach((cardView, index) => {
             cardView.x = (pan.currentPoint.x - pan.startPoint.x) + pan.startCardViewPosition.x - (cardViews.length - 1 - index) * offset;
@@ -601,7 +586,6 @@ export default class GameScene extends PIXI.Container {
 
         if (!arrayIsEqualToArray(this.cards, cards)) {
             this.cards = cards;
-            console.log('updateCardsByPosition', this.cards);
         }
 
         // Sort the cards so that the card on the right appears above the card on the left.
@@ -612,14 +596,14 @@ export default class GameScene extends PIXI.Container {
     }
 
     updateCardViewsByPosition() {
-        const offset = 40;
-        const cardHeight = 200;
-        const cardWidth = cardHeight * 250 / 363;
+        const offset = 25;
+        const cardHeight = 100;
+        const cardWidth = cardHeight * 225 / 300;
 
         let width = 0;
         let cards = this.cards;
         if (cards.length > 0) {
-            width = (cards.length - 1) * 40 + cardWidth;
+            width = (cards.length - 1) * offset + cardWidth;
         }
 
         const pan = this.cardsContainerView.drmPan;
@@ -658,6 +642,10 @@ export default class GameScene extends PIXI.Container {
     }
 
     cardsContainerViewPointerDown(event) {
+        if (this.cards.length == 0) {
+            return;
+        }
+
         const pan = this.cardsContainerView.drmPan;
         pan.isDragging = true;
         pan.startPoint = this.cardsContainerView.toLocal(event.data.global);
@@ -693,6 +681,14 @@ export default class GameScene extends PIXI.Container {
 
     cardsContainerViewPointerMove(event) {
         const pan = this.cardsContainerView.drmPan;
+        if (!pan.isDragging) {
+            return;
+        }
+
+        if (this.cards.length == 0) {
+            return;
+        }
+
         pan.currentPoint = this.cardsContainerView.toLocal(event.data.global);
         if (pan.action == config.panAction.notDetermined) {
             const cardViewsInAction = this.findCardViewsInAction();
@@ -701,22 +697,23 @@ export default class GameScene extends PIXI.Container {
                     clearTimeout(pan.longPressTimer);
                     pan.longPressTimer = null;
                 }
-                console.log('pointerMove notDetermined', pan.cardViewsInAction.length);
                 pan.action = config.panAction.selecting;
                 this.refreshPanSelectingCards(pan.cardViewsInAction);
             }
         } else if (pan.action == config.panAction.selecting) {
             pan.cardViewsInAction = this.findCardViewsInAction();
-            console.log('pointerMove selecting', pan.cardViewsInAction.length);
             this.refreshPanSelectingCards(pan.cardViewsInAction);
         } else if (pan.action == config.panAction.repositioning) {
-            console.log('pointerMove repositioning', pan.cardViewsInAction.length);
             this.refreshRepositioningCardViews(pan.cardViewsInAction);
             this.updateCardsByPosition();
         }
     }
 
     cardsContainerViewPointerUp(event) {
+        if (this.cards.length == 0) {
+            return;
+        }
+
         const pan = this.cardsContainerView.drmPan;
         if (pan.longPressTimer) {
             clearTimeout(pan.longPressTimer);
@@ -802,9 +799,9 @@ export default class GameScene extends PIXI.Container {
             let localIndex = this.localIndex(i);
             let playerView = this.playerViews[localIndex];
 
-            let label = playerView.drmName;
-            label.tint = (i == currentPlayer) ? 0x000000 : 0xFFFFFF;
-            label.fill = (i == currentPlayer) ? 0x000000 : 0xFFFFFF;
+            let nameLabel = playerView.drmNameLabel;
+            nameLabel.tint = (i == currentPlayer) ? 0x000000 : 0xFFFFFF;
+            nameLabel.fill = (i == currentPlayer) ? 0x000000 : 0xFFFFFF;
 
             let jokerSign = playerView.drmJokerSign;
             let jokerSign2 = playerView.drmJokerSign2;
@@ -876,14 +873,14 @@ export default class GameScene extends PIXI.Container {
         this.cardViews = [];
         this.cardViewsMap = {};
 
-        const offset = 40;
-        const cardHeight = 200;
-        const cardWidth = cardHeight * 250 / 363;
+        const offset = 25;
+        const cardHeight = 100;
+        const cardWidth = cardHeight * 225 / 300;
         const selectedOffset = cardHeight * 0.2;
         let width = 0;
         let cards = this.cards;
         if (cards.length > 0) {
-            width = (cards.length - 1) * 40 + cardWidth;
+            width = (cards.length - 1) * offset + cardWidth;
         }
 
         cards.forEach((card, index) => {
@@ -905,8 +902,8 @@ export default class GameScene extends PIXI.Container {
 
     refreshSelectedCards() {
         this.cardViews.forEach((cardView) => {
-            const cardHeight = 200;
-            const cardWidth = cardHeight * 250 / 363;
+            const cardHeight = 100;
+            const cardWidth = cardHeight * 225 / 300;
             const selectedOffset = cardHeight * 0.2;
             if (this.selectedCards.includes(cardView.drmCard)) {
                 cardView.y = 0;
@@ -919,6 +916,7 @@ export default class GameScene extends PIXI.Container {
     refreshPlayedCards() {
         this.scrollContainer.removeChildren();
         let hands = databus.gameSet.currentGame.currentRoundHands;
+        const offset = 25;
         for (let i = 0; i < hands.length; i++) {
             let hand = hands[i];
             let cards = hand.cards;
@@ -926,27 +924,31 @@ export default class GameScene extends PIXI.Container {
                 let card = cards[j];
                 let image = pokerCardImage(card);
                 let cardView = new PIXI.Sprite.from(image);
-                const cardHeight = 200;
-                const cardWidth = cardHeight * 250 / 363;
-                cardView.x = (this.scrollContainer._width / 2) - (((cards.length / 2) - j) * 40);
+                const cardHeight = 100;
+                const cardWidth = cardHeight * 225 / 300;
+                cardView.x = (this.scrollContainer._width / 2) - (((cards.length / 2) - j) * offset);
                 cardView.y = i * 60;
                 cardView.width = cardWidth;
                 cardView.height = cardHeight;
                 this.scrollContainer.addChild(cardView);
-                this.scrollContainer.y = -this.scrollContainer.height + 200;
+                this.scrollContainer.y = -this.scrollContainer.height + this.scrollContainer.drmScrollViewHeight;
             }
         }
     }
 
     initPlayedCardListScrollView() {
+        const scrollViewHeight = 100;
+        const marginX = 200;
+
         const scrollContainer = new PIXI.Container();
-        scrollContainer.width = config.GAME_WIDTH - 400;
-        scrollContainer.height = 300;
+        scrollContainer.width = config.windowWidth - marginX * 2;
+        scrollContainer.height = 0;
         this.scrollContainer = scrollContainer;
+        this.scrollContainer.drmScrollViewHeight = scrollViewHeight;
 
         const mask = new PIXI.Graphics();
         mask.beginFill(0x000000);
-        mask.drawRect(0, 0, config.GAME_WIDTH, 200);
+        mask.drawRect(0, 0, config.windowWidth, 100);
         mask.endFill();
         scrollContainer.mask = mask;
 
@@ -954,38 +956,45 @@ export default class GameScene extends PIXI.Container {
         scrollView.addChild(scrollContainer);
         scrollView.addChild(mask);
         scrollView.mask = mask;
-        scrollView.x = 200;
-        scrollView.y = 200;
-        scrollView.width = config.GAME_WIDTH - 400;
-        scrollView.height = 300;
+        scrollView.x = marginX;
+        scrollView.y = 100;
+        scrollView.width = config.windowWidth - marginX * 2;
+        scrollView.height = 100;
         this.addChild(scrollView);
 
         scrollView.interactive = true;
         scrollView.on("wheel", (event) => {
+            const scrollContainer = this.scrollContainer;
             const delta = event.deltaY * 0.5;
-            scrollContainer.y = Math.min(0, Math.max(scrollContainer.y - delta, -scrollContainer.height + 200));
+            scrollContainer.y = Math.min(0, Math.max(scrollContainer.y - delta, -scrollContainer.height + scrollContainer.drmScrollViewHeight));
         });
 
         let isDragging = false;
         let startY = 0;
         let startContainerY = 0;
 
-        scrollView.on("pointerdown", (event) => {
+        scrollView.on('pointerdown', (event) => {
             isDragging = true;
             startY = event.data.global.y;
             startContainerY = scrollContainer.y;
         });
 
-        scrollView.on("pointermove", (event) => {
+        scrollView.on('pointermove', (event) => {
             if (!isDragging) {
                 return;
             }
+
+            const scrollContainer = this.scrollContainer;
             const newY = startContainerY + (event.data.global.y - startY);
-            scrollContainer.y = Math.min(0, Math.max(newY, -scrollContainer.height + 200));
+            scrollContainer.y = Math.min(0, Math.max(newY, -scrollContainer.height + scrollContainer.drmScrollViewHeight));
         });
 
-        scrollView.on("pointerup", () => { isDragging = false; });
-        scrollView.on("pointerupoutside", () => { isDragging = false; });
+        scrollView.on('pointerup', () => { 
+            isDragging = false;
+        });
+        scrollView.on('pointerupoutside', () => { 
+            isDragging = false;
+        });
     }
 
     localIndex(index) {
@@ -1005,7 +1014,7 @@ export default class GameScene extends PIXI.Container {
 
         databus.gameSet.shuffle();
         console.log("deck: " + "[" + databus.gameSet.currentGame.currentPlayer + "]" + databus.gameSet.currentGame.deck);
-        this.gameServer.uploadGameSet();
+        this.uploadGameSet();
 
         setTimeout(() => {
             this.distributeCard();
@@ -1029,7 +1038,7 @@ export default class GameScene extends PIXI.Container {
             setTimeout(() => {
                 this.distributeCard();
             }, 1000);
-            this.gameServer.uploadGameSet();
+            this.uploadGameSet();
             return;
         }
 
@@ -1057,12 +1066,12 @@ export default class GameScene extends PIXI.Container {
             currentGame.state = config.gameState.playing;
         }
 
-        this.gameServer.uploadGameSet();
+        this.uploadGameSet();
     }
 
     newGame() {
         databus.gameSet.newGame();
-        this.gameServer.uploadGameSet();
+        this.uploadGameSet();
         setTimeout(() => {
             this.distribute();
         }, 1000);
@@ -1071,9 +1080,9 @@ export default class GameScene extends PIXI.Container {
     refreshSelectAllButton() {
         let cards = this.cards;
         if (cards.length == this.selectedCards.length) {
-            this.selectAllButton.titleLabel.text = "全不选";
+            this.selectAllButton.drmTitleLabel.text = "全不选";
         } else {
-            this.selectAllButton.titleLabel.text = "全选";
+            this.selectAllButton.drmTitleLabel.text = "全选";
         }
         this.selectAllButton.visible = this.cards.length > 0;
     }
@@ -1087,6 +1096,11 @@ export default class GameScene extends PIXI.Container {
     }
 
     refreshState() {
+        const currentGame = databus.gameSet.currentGame;
+        if (!currentGame) {
+            return;
+        }
+
         let msgLabelText = '';
         let announceButtonVisible = false;
         let passButtonVisible = false;
@@ -1094,8 +1108,7 @@ export default class GameScene extends PIXI.Container {
         let newGameButtonVisible = false;
 
         const cards = this.cards;
-        var currentGame = databus.gameSet.currentGame;
-        var state = currentGame.state;
+        const state = currentGame.state;
         if (state == config.gameState.init) {
             msgLabelText = '即将开始第' + (databus.gameSet.games.length + 1) + '局';
             this.selectedCards = [];
@@ -1179,7 +1192,7 @@ export default class GameScene extends PIXI.Container {
         } else {
             this.pass();
         }
-        this.gameServer.uploadGameSet();
+        this.uploadGameSet();
     }
 
     _destroy() {

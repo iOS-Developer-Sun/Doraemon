@@ -11,20 +11,21 @@ import Home from './scenes/home.js';
 
 export default class App extends PIXI.Application {
     constructor() {
-        super(config.GAME_WIDTH, config.GAME_HEIGHT, config.pixiOptions);
+        super(config.windowWidth, config.windowHeight, config.pixiOptions);
+
+        console.log(config.windowWidth, config.windowHeight, config.safeArea);
 
         this.bindWxEvents();
 
-        // 适配小游戏的触摸事件
         this.renderer.plugins.interaction.mapPositionToPoint = (point, x, y) => {
-            point.x = x * 2 * (667 / window.innerWidth);
-            point.y = y * 2 * (375 / window.innerHeight);
+            point.x = x;
+            point.y = y;
         };
 
         // this.aniId = null;
         // this.bindLoop = this.loop.bind(this);
 
-        config.resources.forEach(item => PIXI.loader.add(item));
+        // config.resources.forEach(item => PIXI.loader.add(item));
         // PIXI.loader.load(this.init.bind(this));
         this.init();
     }
@@ -101,15 +102,7 @@ export default class App extends PIXI.Application {
     }
 
     init() {
-        this.scaleToScreen();
-
-        this.bg = new BackGround();
-        this.stage.addChild(this.bg);
-
-        // this.ticker.stop();
-        // this.timer = +new Date();
-        // this.aniId = window.requestAnimationFrame(this.bindLoop);
-
+        this.stage.addChild(new BackGround());
         login.do(() => {
             gameServer.login().then(() => {
                 this.scenesInit();
@@ -117,18 +110,18 @@ export default class App extends PIXI.Application {
         });
     }
 
-    scaleToScreen() {
-        const x = window.innerWidth / 667;
-        const y = window.innerHeight / 375;
+    // scaleToScreen() {
+    //     const x = window.innerWidth / 667;
+    //     const y = window.innerHeight / 375;
 
-        if (x > y) {
-            this.stage.scale.x = y / x;
-            this.stage.x = (1 - this.stage.scale.x) / 2 * config.GAME_WIDTH;
-        } else {
-            this.stage.scale.y = x / y;
-            this.stage.y = (1 - this.stage.scale.y) / 2 * config.GAME_HEIGHT;
-        }
-    }
+    //     if (x > y) {
+    //         this.stage.scale.x = y / x;
+    //         this.stage.x = (1 - this.stage.scale.x) / 2 * config.windowWidth;
+    //     } else {
+    //         this.stage.scale.y = x / y;
+    //         this.stage.y = (1 - this.stage.scale.y) / 2 * config.windowHeight;
+    //     }
+    // }
 
     _update(dt) {
         gameServer.update(dt);

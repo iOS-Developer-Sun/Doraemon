@@ -1,24 +1,24 @@
+// import { canvas } from '../js/global.js'
 import {
     getDeviceInfo
 } from './common/util.js';
 
 const deviceinfo = getDeviceInfo();
+const windowinfo = wx.getWindowInfo();
 
 export default {
-    debug: true,
-
-    dpr: deviceinfo.devicePixelRatio,
     windowWidth: deviceinfo.windowWidth,
     windowHeight: deviceinfo.windowHeight,
 
-    GAME_WIDTH: 667 * 2,
-    GAME_HEIGHT: 375 * 2,
+    debug: true,
 
     pixiOptions: {
         backgroundColor: 0,
         antialias: false,
         sharedTicker: true,
         view: canvas,
+        resolution: deviceinfo.devicePixelRatio || 1,
+        autoDensity: true,
     },
 
     roomState: {
@@ -29,23 +29,16 @@ export default {
     },
 
     deviceinfo,
-
-    resources: [
-        "images/bg.png",
-        "images/aircraft1.png",
-        "images/aircraft2.png",
-        "images/bullet_blue.png",
-        "images/default_user.png",
-        "images/avatar_default.png",
-        "images/hosticon.png",
-        "images/iconready.png",
-    ],
-
-    msg: {
-        "SHOOT": 1,
-        "MOVE_DIRECTION": 2,
-        "MOVE_STOP": 3,
-        "STAT": 4,
+    safeArea: windowinfo.safeArea ? {
+        left: windowinfo.safeArea.left,
+        right: deviceinfo.windowWidth - windowinfo.safeArea.right,
+        top: windowinfo.safeArea.top,
+        bottom: deviceinfo.windowHeight - windowinfo.safeArea.bottom,
+    } : {
+        left: 0,
+        right: 0,
+        top: 0,
+        bottom: 0
     },
 
     roleMap: {

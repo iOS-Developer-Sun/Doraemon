@@ -26,8 +26,8 @@ export default class Battle extends PIXI.Container {
         let box = new PIXI.Container();
         this.box = box;
         this.addChild(box);
-        box.x = (config.GAME_WIDTH - w) / 2;
-        box.y = config.GAME_HEIGHT - h - 52;
+        box.x = (config.windowWidth - w) / 2;
+        box.y = config.windowHeight - h - 52;
         box.width = w;
         box.height = h + 4;
 

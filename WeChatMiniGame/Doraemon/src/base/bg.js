@@ -1,5 +1,5 @@
 import * as PIXI from '../../libs/pixi.js';
-import config    from '../config.js';
+import config from '../config.js';
 
 export default class BackGround extends PIXI.Sprite {
     constructor() {
@@ -10,15 +10,7 @@ export default class BackGround extends PIXI.Sprite {
     }
 
     fill() {
-        let width  = this.texture.width;
-        let height = this.texture.height;
-
-        if ( width / height > config.GAME_WIDTH / config.GAME_HEIGHT ) {
-            this.height = config.GAME_HEIGHT;
-            this.width = width * ( config.GAME_HEIGHT / height);
-        } else {
-            this.width = config.GAME_WIDTH;
-            this.height = height * ( config.GAME_WIDTH / width);
-        }
+        this.width = config.windowWidth;
+        this.height = config.windowHeight;
     }
 }

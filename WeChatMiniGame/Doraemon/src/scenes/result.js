@@ -11,12 +11,12 @@ export default class Result extends PIXI.Container {
 
     initUI() {
         let title = new PIXI.Text('1V1对战', { fontSize: 36, align : 'center'});
-        title.x   = config.GAME_WIDTH / 2 - title.width / 2;
+        title.x   = config.windowWidth / 2 - title.width / 2;
         title.y   = 100;
         this.addChild(title);
 
         let win = new PIXI.Text('胜', { fontSize: 36, align : 'center'});
-        win.x   = config.GAME_WIDTH / 2 - win.width / 2;
+        win.x   = config.windowWidth / 2 - win.width / 2;
         win.y   = 330;
         this.addChild(win);
     }
@@ -24,8 +24,8 @@ export default class Result extends PIXI.Container {
     appendOpBtn() {
         this.addChild(createBtn({
             img : 'images/btn_bg.png',
-            x   : config.GAME_WIDTH / 2,
-            y   : config.GAME_HEIGHT - 150,
+            x   : config.windowWidth / 2,
+            y   : config.windowHeight - 150,
             text: '确定',
             onclick: () => {
                 this.gameServer.clear();
@@ -42,8 +42,8 @@ export default class Result extends PIXI.Container {
         user.width  = 100;
         user.height = 100;
         user.x = (   index === 0
-                   ? config.GAME_WIDTH / 2 - user.width - padding
-                   : config.GAME_WIDTH / 2 + padding  );
+                   ? config.windowWidth / 2 - user.width - padding
+                   : config.windowWidth / 2 + padding  );
         user.y     = 300;
 
         this.addChild(user);
