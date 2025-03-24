@@ -1,15 +1,11 @@
 import * as PIXI from '../../libs/pixi.js';
 import config from '../config.js';
 import databus from '../databus.js';
-import { createBtn } from '../common/ui.js';
+import { createBtn, createText } from '../common/ui.js';
 import { isGreaterThan, pokerCardImage, getJokersCount, getPokerCards, PokerCards, PokerCardsType } from '../../js/poker'
-import { arrayByRemovingObjectsFromArray, arrayContainsObjectsFromArray, createArray } from '../common/util.js'
+import { isPointNearPoint, arrayByRemovingObjectsFromArray, arrayIsEqualToArray, createArray } from '../common/util.js'
 
 // https://www.flaticon.com/search?author_id=890&style_id=1373&type=standard&word=joker
-
-import {
-    createText
-} from '../common/ui.js';
 
 import GameSet, { Game, PlayingGame } from '../../js/gameset.js';
 
@@ -21,10 +17,13 @@ export default class GameScene extends PIXI.Container {
     gameServer = undefined
 
     /** @type {number[]} */
-    cardList = [];
+    cards = [];
 
     /** @type {PIXI.Sprite[]} */
-    cardImageViews = [];
+    cardViews = [];
+
+    /** @type {Record<number, PIXI.Sprite>} */
+    cardViewsMap = {};
 
     /** @type {PIXI.Sprite} */
     cardsContainerView;
@@ -36,6 +35,15 @@ export default class GameScene extends PIXI.Container {
         super();
 
         this.playerViews = createArray(databus.max_players_count);
+    }
+
+    selectedCardViews() {
+        const selectedCardViews = this.selectedCards.map((selectedCard) => {
+            return this.cardViewsMap[selectedCard];
+        }).sort((a, b) => {
+            return a.x - b.x;
+        });
+        return selectedCardViews;
     }
 
     launch(gameServer) {
@@ -203,7 +211,6 @@ export default class GameScene extends PIXI.Container {
         const cardsContainerViewWidth = config.GAME_WIDTH - 400;
         cardsContainerView.width = cardsContainerViewWidth;
         cardsContainerView.height = cardsContainerViewHeight;
-
         cardsContainerView.x = 200;
         cardsContainerView.y = config.GAME_HEIGHT - cardsContainerViewHeight;
         cardsContainerView.interactive = true;
@@ -218,12 +225,16 @@ export default class GameScene extends PIXI.Container {
         cardsContainerView.addChild(backgroundColor);
 
         const pan = {
+            containerWidth: cardsContainerView.width,
+            containerHeight: cardsContainerView.height,
             isDragging: false,
-            startCardImageView: null,
+            startCardView: null,
+            startCardViewPosition: null,
             startPoint: null,
             currentPoint: null,
             action: config.panAction.notDetermined,
-            cardImageViewsInRange: [],
+            cardViewsInAction: [],
+            longPressTimer: null,
         }
 
         cardsContainerView.drmPan = pan;
@@ -253,7 +264,7 @@ export default class GameScene extends PIXI.Container {
         var players = createArray(databus.max_players_count);
 
         if (databus.testMode) {
-            memberList.forEach((member, index) => {
+            memberList.forEach((member) => {
                 players[member.posNum] = member;
             });
 
@@ -550,26 +561,100 @@ export default class GameScene extends PIXI.Container {
         }
     }
 
-    findCardImageViewsInRange() {
-        let cardImageViewsInRange = [];
+    refreshPanSelectingCards(cardViews) {
+        this.cardViews.forEach(cardView => {
+            if (cardViews.includes(cardView)) {
+                cardView.tint = 0xAAAAAA;
+            } else {
+                cardView.tint = 0xFFFFFF;
+            }
+        });
+    }
+
+    refreshRepositioningCardViews(cardViews) {
+        const pan = this.cardsContainerView.drmPan;
+        const offset = 40;
+        const cardHeight = 200;
+        const cardWidth = cardHeight * 250 / 363;
+
+        cardViews.forEach((cardView, index) => {
+            cardView.x = (pan.currentPoint.x - pan.startPoint.x) + pan.startCardViewPosition.x - (cardViews.length - 1 - index) * offset;
+            cardView.y = (pan.currentPoint.y - pan.startPoint.y) + pan.startCardViewPosition.y;
+            // cardView.y = 0;
+        });
+
+        this.cardViews.forEach(cardView => {
+            if (cardViews.includes(cardView)) {
+                cardView.alpha = 0.8;
+            } else {
+                cardView.alpha = 1;
+            }
+        });
+    }
+
+    updateCardsByPosition() {
+        const cards = this.cards.slice().sort((a, b) => {
+            const x1 = this.cardViewsMap[a].x;
+            const x2 = this.cardViewsMap[b].x;
+            return x1 - x2;
+        });
+
+        if (!arrayIsEqualToArray(this.cards, cards)) {
+            this.cards = cards;
+            console.log('updateCardsByPosition', this.cards);
+        }
+
+        // Sort the cards so that the card on the right appears above the card on the left.
+        this.cardsContainerView.children.sort((a, b) => a.x - b.x);
+        this.cardViews.sort((a, b) => a.x - b.x);
+
+        this.updateCardViewsByPosition();
+    }
+
+    updateCardViewsByPosition() {
+        const offset = 40;
+        const cardHeight = 200;
+        const cardWidth = cardHeight * 250 / 363;
+
+        let width = 0;
+        let cards = this.cards;
+        if (cards.length > 0) {
+            width = (cards.length - 1) * 40 + cardWidth;
+        }
+
+        const pan = this.cardsContainerView.drmPan;
+        const cardViewsInAction = pan.cardViewsInAction;
+        const containerWidth = pan.containerWidth;
+
+        cards.forEach((card, index) => {
+            const cardView = this.cardViewsMap[card];
+            if (!cardViewsInAction.includes(this.cardViewsMap[card])) {
+                const containerWidth = this.cardsContainerView.drmPan.containerWidth;
+                cardView.x = (containerWidth - width) / 2 + index * offset;
+            }
+        });
+    }
+
+    findCardViewsInAction() {
+        let cardViewsInAction = [];
         const pan = this.cardsContainerView.drmPan;
         let startX = pan.startPoint.x;
         let currentX = pan.currentPoint.x;
         const left = Math.min(startX, currentX);
         const right = Math.max(startX, currentX);
-
-        for (let index = this.cardImageViews.length - 1; index >= 0; index--) {
-            const cardImageView = this.cardImageViews[index];
-            let cardImageViewLeft = cardImageView.x;
-            let cardImageViewRight = cardImageView.x + cardImageView.width;
-            if (index != this.cardImageViews.length - 1) {
-                cardImageViewRight = this.cardImageViews[index + 1].x;
+        const cardViews = this.cardViews;
+        for (let index = cardViews.length - 1; index >= 0; index--) {
+            const cardView = cardViews[index];
+            let cardViewLeft = cardView.x;
+            let cardViewRight = cardView.x + cardView.width;
+            if (index != cardViews.length - 1) {
+                cardViewRight = cardViews[index + 1].x;
             }
-            if (!(left > cardImageViewRight || right < cardImageViewLeft)) {
-                cardImageViewsInRange.push(cardImageView);
+            if (!(left > cardViewRight || right < cardViewLeft)) {
+                cardViewsInAction.push(cardView);
             }
         }
-        return cardImageViewsInRange;
+        return cardViewsInAction;
     }
 
     cardsContainerViewPointerDown(event) {
@@ -577,86 +662,77 @@ export default class GameScene extends PIXI.Container {
         pan.isDragging = true;
         pan.startPoint = this.cardsContainerView.toLocal(event.data.global);
         pan.currentPoint = this.cardsContainerView.toLocal(event.data.global);
-        pan.cardImageViewLists = this.findCardImageViewsInRange();
-        console.log('pointerDown', pan.cardImageViewLists.length);
-        if (pan.cardImageViewLists.length > 0) {
-            pan.startCardImageView = pan.cardImageViewLists[0];
+        pan.cardViewsInAction = this.findCardViewsInAction();
+        console.log('pointerDown', pan.cardViewsInAction.length);
+        if (pan.cardViewsInAction.length > 0) {
+            pan.startCardView = pan.cardViewsInAction[0];
+            pan.startCardViewPosition = { x: pan.startCardView.x, y: pan.startCardView.y };
         }
-        this.refreshCardsInRange(pan.cardImageViewLists);
+
+        if (this.selectedCards.length > 0 || pan.startCardView) {
+            pan.longPressTimer = setTimeout(() => {
+                if (pan.action != config.panAction.notDetermined) {
+                    return;
+                }
+
+                pan.action = config.panAction.repositioning;
+                wx.vibrateShort('medium');
+
+                if (this.selectedCards.length > 0) {
+                    pan.cardViewsInAction = this.selectedCardViews();
+                    pan.startCardView = pan.cardViewsInAction[pan.cardViewsInAction.length - 1];
+                    pan.startCardViewPosition = { x: pan.startCardView.x, y: pan.startCardView.y };
+                } else {
+                    pan.cardViewsInAction = [pan.startCardView];
+                }
+                this.refreshRepositioningCardViews(pan.cardViewsInAction);
+                this.updateCardsByPosition();
+            }, 500);
+        }
     }
 
     cardsContainerViewPointerMove(event) {
         const pan = this.cardsContainerView.drmPan;
         pan.currentPoint = this.cardsContainerView.toLocal(event.data.global);
         if (pan.action == config.panAction.notDetermined) {
-            pan.cardImageViewLists = this.findCardImageViewsInRange();
-            console.log('pointerMove notDetermined', pan.cardImageViewLists.length);
-            if (pan.cardImageViewLists.length >= 2) {
-                pan.action = config.panAction.selecting;
-                this.refreshCardsInRange(pan.cardImageViewLists);
-            } else if (pan.currentPoint.y - pan.startPoint.y < -100) {
-                if (pan.startCardImageView || this.selectedCards.length > 0) {
-                    pan.action = config.panAction.repositioning;
-                    this.refreshCardsInRange([]);
-                    if (this.selectedCards.length > 0) {
-                        pan.cardImageViewLists = this.cardImageViews.filter(cardImageView => this.selectedCards.includes(cardImageView.drmCard));
-                    } else {
-                        pan.cardImageViewLists = [pan.startCardImageView];
-                    }
-                    this.refreshRepositioningCardImageViews(pan.cardImageViewLists);
-                } else {
-                    this.refreshCardsInRange(pan.cardImageViewLists);
+            const cardViewsInAction = this.findCardViewsInAction();
+            if (cardViewsInAction.length != pan.cardViewsInAction || !isPointNearPoint(pan.startPoint, pan.currentPoint)) {
+                if (pan.longPressTimer) {
+                    clearTimeout(pan.longPressTimer);
+                    pan.longPressTimer = null;
                 }
+                console.log('pointerMove notDetermined', pan.cardViewsInAction.length);
+                pan.action = config.panAction.selecting;
+                this.refreshPanSelectingCards(pan.cardViewsInAction);
             }
         } else if (pan.action == config.panAction.selecting) {
-            pan.cardImageViewLists = this.findCardImageViewsInRange();
-            console.log('pointerMove selecting', pan.cardImageViewLists.length);
-            this.refreshCardsInRange(pan.cardImageViewLists);
+            pan.cardViewsInAction = this.findCardViewsInAction();
+            console.log('pointerMove selecting', pan.cardViewsInAction.length);
+            this.refreshPanSelectingCards(pan.cardViewsInAction);
         } else if (pan.action == config.panAction.repositioning) {
-            console.log('pointerMove repositioning', pan.cardImageViewLists.length);
-            this.refreshRepositioningCardImageViews(pan.cardImageViewLists);
+            console.log('pointerMove repositioning', pan.cardViewsInAction.length);
+            this.refreshRepositioningCardViews(pan.cardViewsInAction);
+            this.updateCardsByPosition();
         }
-    }
-
-    refreshCardsInRange(cardImageViewLists) {
-        console.log('refreshCardsInRange', cardImageViewLists.length);
-        this.cardImageViews.forEach(cardImageView => {
-            if (cardImageViewLists.includes(cardImageView)) {
-                cardImageView.tint = 0xAAAAAA;
-            } else {
-                cardImageView.tint = 0xFFFFFF;
-            }
-        });
-    }
-
-    refreshRepositioningCardImageViews(cardImageViewLists) {
-        const pan = this.cardsContainerView.drmPan;
-        const xOffset = pan.currentPoint.x - pan.startPoint.x;
-        const yOffset = pan.currentPoint.y - pan.startPoint.y;
-        cardImageViewLists.forEach((cardImageView, index) => {
-            cardImageView.x = pan.currentPoint.x + index * 40;
-            cardImageView.y = pan.currentPoint.y;
-        });
-
-        this.cardImageViews.forEach(cardImageView => {
-            if (cardImageViewLists.includes(cardImageView)) {
-                cardImageView.alpha = 0.8;
-            } else {
-                cardImageView.alpha = 1;
-            }
-        });
     }
 
     cardsContainerViewPointerUp(event) {
         const pan = this.cardsContainerView.drmPan;
+        if (pan.longPressTimer) {
+            clearTimeout(pan.longPressTimer);
+            pan.longPressTimer = null;
+        }
+
+        let needDeselectAll = true;
 
         if (pan.action == config.panAction.repositioning) {
-            pan.cardImageViewLists.forEach(cardImageView => {
-                cardImageView.alpha = 1;
+            pan.cardViewsInAction.forEach(cardView => {
+                cardView.alpha = 1;
             });
         } else {
-            pan.cardImageViewLists.forEach(cardImageView => {
-                const cardIndex = cardImageView.drmCard;
+            needDeselectAll = pan.cardViewsInAction.length == 0;
+            pan.cardViewsInAction.forEach(cardView => {
+                const cardIndex = cardView.drmCard;
                 let index = this.selectedCards.indexOf(cardIndex);
                 if (index !== -1) {
                     this.selectedCards.splice(index, 1);
@@ -666,14 +742,20 @@ export default class GameScene extends PIXI.Container {
             });
         }
 
+        if (needDeselectAll) {
+            this.selectedCards = [];
+        }
+
         pan.isDragging = false;
-        pan.startCardImageView = null;
+        pan.startCardView = null;
         pan.startPoint = null;
         pan.currentPoint = null;
         pan.action = config.panAction.notDetermined;
-        pan.cardImageViewLists = [];
+        pan.cardViewsInAction = [];
 
-        this.refreshCardsInRange([]);
+        this.updateCardsByPosition();
+
+        this.refreshPanSelectingCards([]);
         this.refreshCards();
         this.refreshSelectAllButton();
         this.refreshState();
@@ -684,11 +766,11 @@ export default class GameScene extends PIXI.Container {
     }
 
     selectAllButtonDidClick() {
-        let cardList = this.cardList;
-        if (cardList.length == this.selectedCards.length) {
+        let cards = this.cards;
+        if (cards.length == this.selectedCards.length) {
             this.selectedCards = [];
         } else {
-            this.selectedCards = cardList.slice();
+            this.selectedCards = cards.slice();
         }
         this.refreshSelectAllButton();
         this.refreshCards();
@@ -710,21 +792,6 @@ export default class GameScene extends PIXI.Container {
         this.gameServer.playCards(cards);
         this.selectedCards = [];
         this.refreshCards();
-    }
-
-    /**
-     * @param {number} cardIndex
-     */
-    clickCard(cardIndex) {
-        let index = this.selectedCards.indexOf(cardIndex);
-        if (index !== -1) {
-            this.selectedCards.splice(index, 1);
-        } else {
-            this.selectedCards.push(cardIndex);
-        }
-        this.refreshSelectAllButton();
-        this.refreshCards();
-        this.refreshState();
     }
 
     refreshPlayers() {
@@ -783,66 +850,68 @@ export default class GameScene extends PIXI.Container {
     }
 
     refreshCards() {
-        let cardList = databus.gameSet.currentGame.cardLists[databus.selfPosNum];
-        let toAdd = arrayByRemovingObjectsFromArray(cardList, this.cardList);
-        let toRemove = arrayByRemovingObjectsFromArray(this.cardList, cardList);
+        let cardList = databus.gameSet.currentGame.cardLists[databus.selfPosNum].slice();
+        let toAdd = arrayByRemovingObjectsFromArray(cardList, this.cards);
+        let toRemove = arrayByRemovingObjectsFromArray(this.cards, cardList);
         if (toAdd.length == 0) {
             if (toRemove.length == 0) {
                 this.refreshSelectedCards();
                 return;
             }
 
-            cardList = arrayByRemovingObjectsFromArray(this.cardList, toRemove);
-            this.cardList = cardList;
-            this.refreshCardImageViews();
+            cardList = arrayByRemovingObjectsFromArray(this.cards, toRemove);
+            this.cards = cardList;
+            this.rebuildCardViews();
             return;
         }
 
-        this.cardList = cardList.slice().sort((a, b) => b - a);
-        this.refreshCardImageViews();
+        this.cards = cardList.sort((a, b) => b - a);
+        this.rebuildCardViews();
     }
 
-    refreshCardImageViews() {
-        this.cardImageViews.forEach(cardImageView => {
-            this.cardsContainerView.removeChild(cardImageView);
+    rebuildCardViews() {
+        this.cardViews.forEach(cardView => {
+            this.cardsContainerView.removeChild(cardView);
         });
-        this.cardImageViews = [];
+        this.cardViews = [];
+        this.cardViewsMap = {};
 
         const offset = 40;
         const cardHeight = 200;
         const cardWidth = cardHeight * 250 / 363;
         const selectedOffset = cardHeight * 0.2;
         let width = 0;
-        let cardList = this.cardList;
-        if (cardList.length > 0) {
-            width = (cardList.length - 1) * 40 + cardWidth;
+        let cards = this.cards;
+        if (cards.length > 0) {
+            width = (cards.length - 1) * 40 + cardWidth;
         }
 
-        cardList.forEach((card, index) => {
+        cards.forEach((card, index) => {
             let image = pokerCardImage(card);
-            let cardImageView = new PIXI.Sprite.from(image);
-            cardImageView.x = (this.cardsContainerView.width - width) / 2 + index * offset;
-            cardImageView.y = selectedOffset;
+            let cardView = new PIXI.Sprite.from(image);
+            cardView.x = (this.cardsContainerView.width - width) / 2 + index * offset;
+            cardView.y = selectedOffset;
             if (this.selectedCards.includes(card)) {
-                cardImageView.y = 0;
+                cardView.y = 0;
             }
-            cardImageView.width = cardWidth;
-            cardImageView.height = cardHeight;
-            cardImageView.drmCard = card;
-            this.cardsContainerView.addChild(cardImageView);
-            this.cardImageViews.push(cardImageView);
+            cardView.width = cardWidth;
+            cardView.height = cardHeight;
+            cardView.drmCard = card;
+            this.cardsContainerView.addChild(cardView);
+            this.cardViews.push(cardView);
+            this.cardViewsMap[card] = cardView;
         });
     }
 
     refreshSelectedCards() {
-        this.cardImageViews.forEach((cardImageView) => {
+        this.cardViews.forEach((cardView) => {
             const cardHeight = 200;
             const cardWidth = cardHeight * 250 / 363;
             const selectedOffset = cardHeight * 0.2;
-            if (this.selectedCards.includes(cardImageView.drmCard)) {
-                cardImageView.y = 0;
+            if (this.selectedCards.includes(cardView.drmCard)) {
+                cardView.y = 0;
             } else {
-                cardImageView.y = selectedOffset;
+                cardView.y = selectedOffset;
             }
         });
     }
@@ -856,14 +925,14 @@ export default class GameScene extends PIXI.Container {
             for (let j = 0; j < cards.length; j++) {
                 let card = cards[j];
                 let image = pokerCardImage(card);
-                let cardImageView = new PIXI.Sprite.from(image);
+                let cardView = new PIXI.Sprite.from(image);
                 const cardHeight = 200;
                 const cardWidth = cardHeight * 250 / 363;
-                cardImageView.x = (this.scrollContainer._width / 2) - (((cards.length / 2) - j) * 40);
-                cardImageView.y = i * 60;
-                cardImageView.width = cardWidth;
-                cardImageView.height = cardHeight;
-                this.scrollContainer.addChild(cardImageView);
+                cardView.x = (this.scrollContainer._width / 2) - (((cards.length / 2) - j) * 40);
+                cardView.y = i * 60;
+                cardView.width = cardWidth;
+                cardView.height = cardHeight;
+                this.scrollContainer.addChild(cardView);
                 this.scrollContainer.y = -this.scrollContainer.height + 200;
             }
         }
@@ -1000,13 +1069,13 @@ export default class GameScene extends PIXI.Container {
     }
 
     refreshSelectAllButton() {
-        let cardList = this.cardList;
-        if (cardList.length == this.selectedCards.length) {
+        let cards = this.cards;
+        if (cards.length == this.selectedCards.length) {
             this.selectAllButton.titleLabel.text = "全不选";
         } else {
             this.selectAllButton.titleLabel.text = "全选";
         }
-        this.selectAllButton.visible = this.cardList.length > 0;
+        this.selectAllButton.visible = this.cards.length > 0;
     }
 
     refresh() {
@@ -1024,7 +1093,7 @@ export default class GameScene extends PIXI.Container {
         let playButtonVisible = false;
         let newGameButtonVisible = false;
 
-        const cardList = this.cardList;
+        const cards = this.cards;
         var currentGame = databus.gameSet.currentGame;
         var state = currentGame.state;
         if (state == config.gameState.init) {
@@ -1033,7 +1102,7 @@ export default class GameScene extends PIXI.Container {
         } else if (state == config.gameState.distributing) {
             msgLabelText = '正在发牌...';
             if (currentGame.announcer == -1) {
-                let canAnnounce = getJokersCount(cardList) > 0;
+                let canAnnounce = getJokersCount(cards) > 0;
                 if (canAnnounce) {
                     announceButtonVisible = true;
                 }
@@ -1042,7 +1111,7 @@ export default class GameScene extends PIXI.Container {
             var announcingCountdown = currentGame.announcingCountdown;
             msgLabelText = '请等待玩家宣(' + announcingCountdown + ')...';
             if (currentGame.announcer == -1) {
-                let canAnnounce = getJokersCount(cardList) > 0;
+                let canAnnounce = getJokersCount(cards) > 0;
                 if (canAnnounce) {
                     announceButtonVisible = true;
                 }
@@ -1069,7 +1138,7 @@ export default class GameScene extends PIXI.Container {
                 }
 
                 let canPlayThreeWithOne = (this.selectedCards.length == 4
-                    && cardList.length == 4
+                    && cards.length == 4
                     && lastHandPokerCards == null);
 
                 /** @type {PokerCards} */

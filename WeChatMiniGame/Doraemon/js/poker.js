@@ -93,28 +93,46 @@ function pokerCardImageFilename(card) {
     var suit = card.suit;
     var value = card.value;
     if (suit === PokerCardSuit.redJoker) {
-        return 'red_joker';
+        // return 'red_joker';
+        // return 'card_joker_0';
+        return '54';
     }
     if (suit === PokerCardSuit.blackJoker) {
-        return 'black_joker';
+        // return 'black_joker';
+        // return 'card_joker_1';
+        return '53';
     }
     var suitnames = [
-        'clubs',
-        'diamonds',
-        'spades',
-        'hearts',
+        // 'clubs',
+        // 'diamonds',
+        // 'spades',
+        // 'hearts',
+        // '2',
+        // '3',
+        // '0',
+        // '1',
+        3,
+        4,
+        1,
+        2,
     ];
     var valuenames = [
-        '3', '4', '5', '6', '7', '8', '9', '10', 'jack', 'queen', 'king', 'ace', '2'
+        // '3', '4', '5', '6', '7', '8', '9', '10', 'jack', 'queen', 'king', 'ace', '2'
+        // '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '1', '2'
+        3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 1, 2
     ];
     var suitname = suitnames[suit];
     var valuename = valuenames[value];
-    return valuename + '_of_' + suitname;
+    // return valuename + '_of_' + suitname;
+    // return 'card_' + valuename + '_' + suitname;
+    return '' + ((valuename - 1) * 4 + suitname);
 }
 function pokerCardImage(index) {
     var card = pokerCard(index);
     var filename = pokerCardImageFilename(card);
-    return 'images/cards/' + filename + '.png';
+    // return 'images/cards/' + filename + '.png';
+    // return 'images/cards2/' + filename + '.png';
+    return 'images/cards3/' + filename + '.png';
 }
 function pokerCardsString(indices) {
     var ret = '';

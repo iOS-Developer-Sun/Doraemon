@@ -257,14 +257,14 @@ export default class GameSet {
 
             const jokersWin = sortedWinners.toString() === jokerPlayers.toString();
             if ((jokersWin || sortedWinners.toString() === nonJokerPlayers.toString())) {
-                // TANLE!
                 if (databus.springRule) {
+                    // TANLE!
                     for (let i = 0; i < currentGame.scores.length; i++) {
                         currentGame.scores[i] = 0;
                     }
                     currentGame.scores[currentGame.winners[0]] = currentGame.totalScore;
+                    this.settleGame();
                 }
-                this.settleGame();
             }
         }
 
@@ -356,11 +356,15 @@ export default class GameSet {
         const currentGame = this.currentGame;
         let jokerScore = currentGame.jokerScore();
         let nonJokerScore = currentGame.nonJokerScore();
+        let winners = currentGame.winners;
+        const nonWinners = currentGame.nonWinners().sort((a, b) => {
+            return (this.playerTotalScores[a] - this.playerTotalScores[b]) || a - b;
+        });
 
-        if (currentGame.jokerPlayers.includes(currentGame.winners[0]) && !currentGame.jokerPlayers.includes(currentGame.nonWinners[0])) {
+        if (currentGame.jokerPlayers.includes(currentGame.winners[0]) && !currentGame.jokerPlayers.includes(nonWinners[0])) {
             jokerScore += databus.punishmentScore;
             nonJokerScore -= databus.punishmentScore;
-        } else if (!currentGame.jokerPlayers.includes(currentGame.winners[0]) && currentGame.jokerPlayers.includes(currentGame.nonWinners[0])) {
+        } else if (!currentGame.jokerPlayers.includes(currentGame.winners[0]) && currentGame.jokerPlayers.includes(nonWinners[0])) {
             nonJokerScore += databus.punishmentScore;
             jokerScore -= databus.punishmentScore;
         }
@@ -369,11 +373,6 @@ export default class GameSet {
         if (currentGame.announcer != -1) {
             jokerScore *= jokerCardsCount;
         }
-
-        let winners = currentGame.winners;
-        let nonWinners = currentGame.nonWinners().sort((a, b) => {
-            return this.playerTotalScores[a] < this.playerTotalScores[b] || a < b;
-        });
 
         const jokersCountMap = currentGame.jokersCountMap();
 

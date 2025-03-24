@@ -21,10 +21,10 @@ class DataBus {
         this.onePair = true;
         this.punishmentScore = 20;
         this.springRule = false;
-        this.cards_count = 20;
-        // this.test_cards = [106, 105, 104, 107, 80, 81, 82, 83, 84, 85, 86, 87, 56, 57];
-        this.max_players_count = 2;
-        this.announcingCountdown = 3;
+        // this.cards_count = 10;
+        // this.test_cards = [106, 105, 107, 104, 80, 81, 82, 83, 84, 85, 86, 87, 56, 57];
+        this.max_players_count = 3;
+        this.announcingCountdown = 0;
 
         this.reset();
     }

@@ -21,6 +21,17 @@ export function getDeviceInfo() {
     return info;
 }
 
+export function isPointNearPoint(point1, point2) {
+    const threshold = 20;
+    if (Math.abs(point1.x - point2.x) > threshold) {
+        return false;
+    }
+    if (Math.abs(point1.y - point2.y) > threshold) {
+        return false;
+    }
+    return true;
+}
+
 export function numbersArray(length, start = 0) {
     var array = [];
     for (let i = 0; i < length; i++) {
@@ -67,4 +78,25 @@ export function arrayContainsObjectsFromArray(container, array) {
         }
     }
     return contains;
+}
+
+export function arrayIsEqualToArray(a, b) {
+    if (a === b) {
+        return true;
+    }
+
+    if (a == null || b == null) {
+        return false;
+    }
+
+    if (a.length !== b.length) {
+        return false;
+    }
+
+    for (var i = 0; i < a.length; ++i) {
+        if (a[i] !== b[i]) {
+            return false;
+        }
+    }
+    return true;
 }
