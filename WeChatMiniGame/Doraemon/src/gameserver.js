@@ -67,7 +67,7 @@ class GameServer {
         this.server.onGameEnd(this.onGameEndHandler);
 
         this.server.onGameStart((res) => {
-            console.log('来自系统的onStart')
+            console.log('onGameStart')
         });
 
         const reconnect = () => {
@@ -187,11 +187,13 @@ class GameServer {
         if (action == 'START') {
             this.startGame();
         } else {
-            databus.gameInstance.logicUpdate(message.senderPosNum, action, data);
+            if (databus.gameInstance) {
+                databus.gameInstance.logicUpdate(message.senderPosNum, action, data);
+            }
         }
     }
 
-    onGameStart() {
+    onGameStart(options) {
         if (this.hasGameStart) {
             return;
         }
@@ -199,7 +201,7 @@ class GameServer {
         wx.setKeepScreenOn({ keepScreenOn: true });
         this.hasGameStart = true;
         console.log('onGameStart');
-        this.event.emit('onGameStart');
+        this.event.emit('onGameStart', options);
 
         this.debugTime = setInterval(() => {
             // this.uploadFrame([
@@ -253,7 +255,7 @@ class GameServer {
         this.svrFrameIndex = res.frameId;
         this.frames.push(res);
 
-        if (!this.reconnecting) {
+        // if (!this.reconnecting) {
             // (res.actionList || []).forEach(oneFrame => {
             // let obj = JSON.parse(oneFrame);
             // console.log('onSyncFrame: ' + oneFrame);
@@ -262,7 +264,7 @@ class GameServer {
             //     this.avgDelay = ((this.avgDelay * (obj.c - 1)) + this.delay) / obj.c;
             // }
             // });
-        }
+        // }
 
         if (this.frames.length > this.frameJitLenght) {
             this.frameStart = true;
@@ -281,6 +283,7 @@ class GameServer {
     }
 
     onReconnect(res) {
+        console.log('onReconnect', res);
         let roomInfo = res.data.roomInfo;
         const memberList = roomInfo.memberList || [];
         for (let i = 0; i < memberList.length; i++) {
@@ -295,11 +298,11 @@ class GameServer {
     }
 
     onRoomInfoChange(roomInfo) {
-        console.log('onRoomInfoChange');
         this.updateRoomInfo(roomInfo);
     }
 
     updateRoomInfo(roomInfo) {
+        console.log('updateRoomInfo', roomInfo);
         this.roomInfo = roomInfo;
         const memberList = roomInfo.memberList || [];
         for (let i = 0; i < memberList.length; i++) {
@@ -325,7 +328,7 @@ class GameServer {
                         content: '查询到之前还有尚未结束的游戏，是否重连继续游戏？',
                         success: (modalRes) => {
                             if (modalRes.confirm) {
-                                databus.currAccessInfo = res.data.accessInfo;
+                                databus.currentAccessInfo = res.data.accessInfo;
 
                                 wx.showLoading({
                                     title: '重连中...',
@@ -335,20 +338,19 @@ class GameServer {
                                     accessInfo: res.data.accessInfo
                                 }).then(connectRes => {
                                     console.log('未结束的游戏断线重连结果', connectRes);
-                                    if (connectRes.errCode === 0) {
+                                    if (connectRes.errCode == null || connectRes.errCode == 0) {
                                         this.onReconnect(res)
                                         this.onRoomInfoChange(res.data.roomInfo);
                                         this.reconnectMaxFrameId = connectRes.maxFrameId || 0;
                                         this.reconnecting = true;
-
-                                        databus.isFromReconnection = true;
-
-                                        // 手动调用onGameStart模拟正常开局
-                                        this.onGameStart('人工');
+                                        this.onGameStart({isFromReconnection: true});
+                                    } else {
+                                        databus.currentAccessInfo = '';
                                     }
                                     wx.hideLoading();
                                 }).catch((e) => {
                                     wx.hideLoading();
+                                    databus.currentAccessInfo = '';
                                     console.log(e);
                                     wx.showToast({
                                         title: '重连失败',
@@ -372,7 +374,7 @@ class GameServer {
             needUserInfo: true,
             success: (res) => {
                 const data = res.data || {};
-                databus.currAccessInfo = this.accessInfo = data.accessInfo || '';
+                databus.currentAccessInfo = this.accessInfo = data.accessInfo || '';
                 databus.selfClientId = data.clientId;
                 this.event.emit('createRoom');
                 console.log('createRoom:' + data.accessInfo);
@@ -387,11 +389,11 @@ class GameServer {
     joinRoom(accessInfo, callback) {
         this.server.joinRoom({
             accessInfo, success: (res) => {
+                console.log('joinRoom:', res);
                 let data = res.data || {};
-                databus.currAccessInfo = this.accessInfo = data.accessInfo || '';
+                databus.currentAccessInfo = this.accessInfo = data.accessInfo || '';
                 databus.selfClientId = data.clientId;
                 this.event.emit('joinRoom');
-                console.log('joinRoom:' + data.accessInfo);
                 callback && callback(null)
             },
             fail: (res) => {
@@ -406,6 +408,7 @@ class GameServer {
     }
 
     broadcast(msg, toPosNumList) {
+        console.log('broadcast:' + msg.action);
         let string = JSON.stringify(msg);
         let report;
         if (toPosNumList != undefined) {
@@ -418,7 +421,6 @@ class GameServer {
                 msg: string,
             };
         }
-        // console.log('broadcast: ' + string);
         this.server.broadcastInRoom(report);
     }
 
@@ -468,10 +470,10 @@ class GameServer {
     startGame() {
         return this.server.startGame({
             success: (res) => {
-                console.log('startGame success');
+                console.log('startGame success', res);
             },
             fail: (res) => {
-                console.log('startGame fail:' + res);
+                console.log('startGame fail', res);
             }
         });
     }
@@ -513,37 +515,37 @@ class GameServer {
         return this.server.updateReadyStatus({ accessInfo: this.accessInfo, isReady });
     }
 
-    update(dt) {
-        if (!this.frameStart) {
-            return;
-        }
+    // update(dt) {
+    //     if (!this.frameStart) {
+    //         return;
+    //     }
 
-        // 重连中不执行渲染
-        if (!this.reconnecting) {
-            databus.gameInstance.renderUpdate(dt);
-        }
+    //     // 重连中不执行渲染
+    //     if (!this.reconnecting) {
+    //         databus.gameInstance.renderUpdate(dt);
+    //     }
 
-        // 本地从游戏开始到现在的运行时间
-        const nowFrameTick = new Date() - this.startTime;
-        const preFrameTick = this.currFrameIndex * this.frameInterval;
+    //     // 本地从游戏开始到现在的运行时间
+    //     const nowFrameTick = new Date() - this.startTime;
+    //     const preFrameTick = this.currFrameIndex * this.frameInterval;
 
-        let currTimeDelta = nowFrameTick - preFrameTick;
+    //     let currTimeDelta = nowFrameTick - preFrameTick;
 
-        if (currTimeDelta >= this.frameInterval) {
-            if (this.frames.length) {
-                this.execFrame();
-                this.currFrameIndex++;
-            }
-        }
+    //     if (currTimeDelta >= this.frameInterval) {
+    //         if (this.frames.length) {
+    //             this.execFrame();
+    //             this.currFrameIndex++;
+    //         }
+    //     }
 
-        // 可能是断线重连的场景，本地有大量的帧，快进
-        if (this.frames.length > this.frameJitLenght) {
-            while (this.frames.length) {
-                this.execFrame();
-                this.currFrameIndex++;
-            }
-        }
-    }
+    //     // 可能是断线重连的场景，本地有大量的帧，快进
+    //     if (this.frames.length > this.frameJitLenght) {
+    //         while (this.frames.length) {
+    //             this.execFrame();
+    //             this.currFrameIndex++;
+    //         }
+    //     }
+    // }
 
     execFrame() {
         // let frame = this.frames.shift();

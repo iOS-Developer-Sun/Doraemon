@@ -8,6 +8,8 @@ import Debug from '../base/debug.js';
 import { getAccessInfo } from '../common/api.js';
 
 export default class Home extends PIXI.Container {
+    static drmName = 'Home';
+
     /** @type {GameServer} */
     gameServer;
     constructor() {
@@ -133,7 +135,7 @@ export default class Home extends PIXI.Container {
         this.gameServer.joinRoom(accessInfo, (errCode) => {
             wx.hideLoading();
             this.handling = false
-            console.log('join' + errCode);
+            console.log('joinRoomWithAccessInfo', errCode);
             if (errCode) {
                 wx.showToast({
                     title: '无法加入房间:' + errCode,

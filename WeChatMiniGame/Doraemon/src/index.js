@@ -49,7 +49,7 @@ export default class App extends PIXI.Application {
         console.log(config.windowWidth, config.windowHeight, config.safeArea);
     }
 
-    runScene(Scene) {
+    runScene(Scene, options) {
         let old = this.stage.getChildByName('scene');
 
         while (old) {
@@ -64,7 +64,8 @@ export default class App extends PIXI.Application {
         let scene = new Scene();
         scene.name = 'scene';
         scene.sceneName = Scene.name;
-        scene.launch(gameServer);
+        console.log('runScene', Scene.drmName);
+        scene.launch(gameServer, options);
         this.stage.addChild(scene);
 
         return scene;
@@ -72,7 +73,7 @@ export default class App extends PIXI.Application {
 
     joinToRoom() {
         wx.showLoading({ title: '加入房间中' });
-        gameServer.joinRoom(databus.currAccessInfo, (errCode) => {
+        gameServer.joinRoom(databus.currentAccessInfo, (errCode) => {
             wx.hideLoading();
             if (errCode == null) {
                 this.runScene(Room);
@@ -82,7 +83,7 @@ export default class App extends PIXI.Application {
 
     scenesInit() {
         // 从会话点进来的场景
-        if (databus.currAccessInfo) {
+        if (databus.currentAccessInfo) {
             this.joinToRoom();
         } else {
             this.runScene(Home);
@@ -97,11 +98,15 @@ export default class App extends PIXI.Application {
         });
 
         gameServer.event.on('joinRoom', () => {
-            this.runScene(Room);
+            if (gameServer.roomInfo.roomState === config.roomState.gameStart) {
+                this.runScene(GameScene);
+            } else {
+                this.runScene(Room);
+            }
         })
 
-        gameServer.event.on('onGameStart', () => {
-            databus.gameInstance = this.runScene(GameScene);
+        gameServer.event.on('onGameStart', (options) => {
+            databus.gameInstance = this.runScene(GameScene, options);
         });
 
         gameServer.event.on('onGameEnd', () => {
@@ -142,10 +147,10 @@ export default class App extends PIXI.Application {
     //     }
     // }
 
-    _update(dt) {
-        gameServer.update(dt);
-        Tween.update();
-    }
+    // _update(dt) {
+    //     gameServer.update(dt);
+    //     Tween.update();
+    // }
 
     // loop() {
     //     let time = +new Date();
@@ -165,15 +170,15 @@ export default class App extends PIXI.Application {
 
             console.log("bindWxEvents accessInfo:" + accessInfo);
 
-            if (!databus.currAccessInfo) {
-                databus.currAccessInfo = accessInfo;
+            if (!databus.currentAccessInfo) {
+                databus.currentAccessInfo = accessInfo;
 
                 this.joinToRoom();
 
                 return;
             }
 
-            if (accessInfo == databus.currAccessInfo) {
+            if (accessInfo == databus.currentAccessInfo) {
                 return;
             }
 
@@ -195,7 +200,7 @@ export default class App extends PIXI.Application {
                                 duration: 2000
                             });
 
-                        databus.currAccessInfo = accessInfo;
+                        databus.currentAccessInfo = accessInfo;
 
                         this.joinToRoom();
                     });

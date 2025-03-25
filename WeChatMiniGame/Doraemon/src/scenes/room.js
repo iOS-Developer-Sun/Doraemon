@@ -7,10 +7,11 @@ import { gsap } from "gsap";
 import { getPasscode } from '../common/api.js';
 
 export default class Room extends PIXI.Container {
+    static drmName = 'Room';
+
     constructor() {
         super();
 
-        this.passcode = null;
         this.selfPosNum = 0;
         this.gameServer = null;
         this.seats = createArray(databus.max_players_count);
@@ -40,9 +41,9 @@ export default class Room extends PIXI.Container {
             this.createOneUser(index);
         }
 
-        if (this.passcode == null && databus.currAccessInfo) {
-            getPasscode(databus.currAccessInfo, (passcode) => {
-                this.passcode = passcode;
+        if (databus.passcode == null && databus.currentAccessInfo) {
+            getPasscode(databus.currentAccessInfo, (passcode) => {
+                databus.passcode = passcode;
                 if (passcode) {
                     this.titleLabel.text = '请就座。' + '密码:' + passcode;
                 }
@@ -107,8 +108,8 @@ export default class Room extends PIXI.Container {
             x: config.windowWidth - 166,
             y: config.windowHeight - 66,
             onclick: () => {
-                console.log('invite:' + databus.currAccessInfo);
-                wx.setClipboardData({ data: databus.currAccessInfo });
+                console.log('invite:' + databus.currentAccessInfo);
+                wx.setClipboardData({ data: databus.currentAccessInfo });
             }
         });
 
@@ -238,6 +239,7 @@ export default class Room extends PIXI.Container {
     }
 
     handleRoomInfo(res) {
+        console.log('handleRoomInfo', res);
         let offset = 0;
         if (databus.selfPosNum >= 0 && databus.selfPosNum < databus.max_players_count) {
             offset = databus.selfPosNum - this.selfPosNum;
@@ -278,8 +280,18 @@ export default class Room extends PIXI.Container {
     }
 
     handleRoomInfoForTheFirstTime(res) {
+        console.log('handleRoomInfoForTheFirstTime');
         const data = res.data || {};
         const roomInfo = data.roomInfo || {};
+        if (roomInfo.roomState == config.roomState.gameStart) {
+            wx.showToast({
+                title: '游戏已开始',
+                icon: 'none',
+                duration: 2000
+            });
+            this.gameServer.clear();
+            return;
+        }
         const memberList = roomInfo.memberList || [];
         for (let i = 0; i < memberList.length; i++) {
             var member = memberList[i];

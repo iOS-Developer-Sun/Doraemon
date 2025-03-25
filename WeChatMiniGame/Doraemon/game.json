@@ -2,9 +2,10 @@
     "deviceOrientation":"landscape",
     "officialPrivacyAuthorizationShowingGap": 10,
     "lockStepOptions" : {
+        "dataType": "String",
         "gameTick": 1000,
-        "heartBeatTick": 30000,
-        "offlineTimeLength": 10000,
+        "heartBeatTick": 5000,
+        "offlineTimeLength": 3600000,
         "UDPReliabilityStrategy": 3
     }
 }

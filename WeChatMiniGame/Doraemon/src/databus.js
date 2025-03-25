@@ -23,7 +23,7 @@ class DataBus {
         this.springRule = false;
         // this.cards_count = 10;
         // this.test_cards = [106, 105, 107, 104, 80, 81, 82, 83, 84, 85, 86, 87, 56, 57];
-        this.max_players_count = 2;
+        this.max_players_count = 3;
         this.announcingCountdown = 0;
 
         this.reset();
@@ -31,7 +31,7 @@ class DataBus {
 
     reset() {
         this.gameover = false;
-        this.currAccessInfo = '';
+        this.currentAccessInfo = '';
         this.playerMap = {};
         this.selfPosNum = 0;
         this.ownerPosNum = -1;

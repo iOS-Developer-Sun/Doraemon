@@ -10,11 +10,15 @@ import { isPointNearPoint, arrayByRemovingObjectsFromArray, arrayIsEqualToArray,
 import GameSet, { Game, PlayingGame } from '../../js/gameset.js';
 
 export default class GameScene extends PIXI.Container {
+    static drmName = 'GameScene';
+
     /** @type {number[]} */
     selectedCards = [];
 
     /** @type {GameServer} */
     gameServer = undefined
+
+    reconnecting = false;
 
     /** @type {number[]} */
     cards = [];
@@ -46,12 +50,13 @@ export default class GameScene extends PIXI.Container {
         return selectedCardViews;
     }
 
-    launch(gameServer) {
+    launch(gameServer, options) {
         this.gameServer = gameServer;
-
         this.initViews();
         this.onRoomInfoChange();
-        if (databus.isFromReconnection && this.gameServer.roomInfo.memberList.length > 1) {
+        if (options && options.isFromReconnection && this.gameServer.roomInfo.memberList.length > 1) {
+            console.log('launch isFromReconnection');
+            this.reconnecting = true;
             this.gameServer.requestGameSet();
         } else {
             if (databus.isOwner) {
@@ -81,6 +86,7 @@ export default class GameScene extends PIXI.Container {
         this.gameServer.event.on(
             "onRoomInfoChange",
             (res => {
+                this.refreshPlayersInfo();
                 res.memberList.length < databus.max_players_count && this.showModal('对方已离开房间', true);
             }).bind(this)
         );
@@ -121,7 +127,7 @@ export default class GameScene extends PIXI.Container {
 
         this.initPlayedCardListScrollView();
         this.initCardsContainerView();
-        this.initPlayer();
+        this.initPlayers();
         this.initOpartions();
         this.appendBackBtn();
     }
@@ -260,7 +266,8 @@ export default class GameScene extends PIXI.Container {
         });
     }
 
-    initPlayer() {
+    initPlayers() {
+        console.log('initPlayers', this.gameServer.roomInfo);
         let memberList = this.gameServer.roomInfo.memberList || [];
         var players = createArray(databus.max_players_count);
         if (databus.testMode) {
@@ -404,12 +411,12 @@ export default class GameScene extends PIXI.Container {
         }
     }
 
-    renderUpdate(dt) {
-        if (databus.gameover) {
-            return;
-        }
-        console.log("renderUpdate");
-    }
+    // renderUpdate(dt) {
+    //     if (databus.gameover) {
+    //         return;
+    //     }
+    //     console.log("renderUpdate");
+    // }
 
     updateGameSet(data) {
         databus.gameSet = new GameSet();
@@ -431,7 +438,7 @@ export default class GameScene extends PIXI.Container {
                 return;
             }
 
-            if (this.gameServer.reconnecting) {
+            if (this.reconnecting) {
                 return;
             }
 
@@ -440,10 +447,12 @@ export default class GameScene extends PIXI.Container {
         }
 
         if (action == 'RESPONDGAMESET') {
-            if (databus.isFromReconnection) {
-                databus.isFromReconnection = false;
-                this.updateGameSet(data);
-                this.refresh();
+            if (this.reconnecting) {
+                if (data) {
+                    this.reconnecting = false;
+                    this.updateGameSet(data);
+                    this.refresh();
+                }
             }
             return;
         }
@@ -538,12 +547,6 @@ export default class GameScene extends PIXI.Container {
                 }
             }
         })
-    }
-
-    renderUpdate(dt) {
-        if (databus.gameover) {
-            return;
-        }
     }
 
     refreshPanSelectingCards(cardViews) {
@@ -789,6 +792,18 @@ export default class GameScene extends PIXI.Container {
         this.gameServer.playCards(cards);
         this.selectedCards = [];
         this.refreshCards();
+    }
+
+    refreshPlayersInfo() {
+        let memberList = this.gameServer.roomInfo.memberList || [];
+        for (let i = 0; i < memberList.length; i++) {
+            const member = memberList[i];
+            const localIndex = this.localIndex(member.posNum);
+            const playerView = this.playerViews[localIndex];
+            playerView.drmAvatar.texture = PIXI.Texture.from(member.headimg);
+            const nameLabel = playerView.drmNameLabel;
+            nameLabel.text = member.nickname;
+        }
     }
 
     refreshPlayers() {
