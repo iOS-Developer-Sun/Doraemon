@@ -1,6 +1,18 @@
-/**
- * 获取当前设备信息
- */
+function getCurrentDateString() {
+    return '[' + (new Date()).toLocaleString() + ']';
+};
+const originalLog = console.log;
+console.log = function () {
+    var args = [].slice.call(arguments);
+    originalLog.apply(console.log,[getCurrentDateString()].concat(args));
+};
+
+const originalError = console.error;
+console.error = function () {
+    var args = [].slice.call(arguments);
+    originalError.apply(console.error,[getCurrentDateString()].concat(args));
+};
+
 export function getDeviceInfo() {
     let info = {};
     let defaultInfo = {

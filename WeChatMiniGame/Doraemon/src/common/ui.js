@@ -55,3 +55,14 @@ export function createCircle(options) {
 
     return circle;
 }
+
+export function addCornerRadius(sprite, cornerRadius) {
+    const mask = new PIXI.Graphics();
+    mask.width = sprite.width;
+    mask.height = sprite.height;
+    mask.beginFill(0xffffff);
+    mask.drawRoundedRect(0, 0, sprite._width, sprite._height, cornerRadius);
+    mask.endFill();
+    sprite.mask = mask;
+    sprite.addChild(mask);
+}

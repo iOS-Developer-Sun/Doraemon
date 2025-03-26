@@ -187,9 +187,9 @@ class GameServer {
         if (action == 'START') {
             this.startGame();
         } else {
-            if (databus.gameInstance) {
-                databus.gameInstance.logicUpdate(message.senderPosNum, action, data);
-            }
+            // if (databus.gameInstance) {
+            //     databus.gameInstance.logicUpdate(message.senderPosNum, action, data);
+            // }
         }
     }
 
@@ -249,23 +249,19 @@ class GameServer {
     }
 
     onSyncFrame(res) {
-        // console.log('onSyncFrame', res.frameId);
-        if (res.frameId % 300 === 0) {
+        if (res.frameId % 60 === 0) {
             console.log('heart');
         }
         this.svrFrameIndex = res.frameId;
         this.frames.push(res);
 
-        // if (!this.reconnecting) {
-            // (res.actionList || []).forEach(oneFrame => {
-            // let obj = JSON.parse(oneFrame);
-            // console.log('onSyncFrame: ' + oneFrame);
-            // if (obj.e === config.msg.STAT && obj.id === databus.selfClientId) {
-            //     this.delay = new Date() - obj.t;
-            //     this.avgDelay = ((this.avgDelay * (obj.c - 1)) + this.delay) / obj.c;
-            // }
-            // });
-        // }
+        (res.actionList || []).forEach(frame => {
+            if (databus.gameInstance) {
+                databus.gameInstance.logicUpdate(frame, res.frameId);
+            } else {
+                databus.halt('no gameInstance!');
+            }
+        });
 
         if (this.frames.length > this.frameJitLenght) {
             this.frameStart = true;
@@ -344,7 +340,7 @@ class GameServer {
                                         this.onRoomInfoChange(res.data.roomInfo);
                                         this.reconnectMaxFrameId = connectRes.maxFrameId || 0;
                                         this.reconnecting = true;
-                                        this.onGameStart({isFromReconnection: true});
+                                        this.onGameStart({ isFromReconnection: true });
                                     } else {
                                         databus.currentAccessInfo = '';
                                     }
@@ -389,7 +385,8 @@ class GameServer {
 
     joinRoom(accessInfo, callback) {
         this.server.joinRoom({
-            accessInfo, success: (res) => {
+            accessInfo,
+            success: (res) => {
                 console.log('joinRoom:', res);
                 let data = res.data || {};
                 databus.currentAccessInfo = this.accessInfo = data.accessInfo || '';
@@ -405,7 +402,20 @@ class GameServer {
     }
 
     uploadFrame(actionList) {
-        this.hasGameStart && this.server.uploadFrame({ actionList });
+        if (!this.hasGameStart) {
+            console.log('uploadFrame game not stared');
+            return;
+        }
+
+        this.server.uploadFrame({
+            actionList: actionList,
+            success: (res) => {
+                console.log('uploadFrame success:', res, actionList[0].length);
+            },
+            fail: (res) => {
+                console.log('uploadFrame fail:', res, actionList[0].length);
+            }
+        });
     }
 
     broadcast(msg, toPosNumList) {
@@ -426,42 +436,42 @@ class GameServer {
     }
 
     uploadGameSet() {
-        this.broadcast({
-            action: 'GAMESET',
-            data: databus.gameSet
-        })
+        // this.broadcast({
+        //     action: 'GAMESET',
+        //     data: databus.gameSet
+        // })
     }
 
     requestGameSet() {
-        this.broadcast({
-            action: 'REQUESTGAMESET',
-        })
+        // this.broadcast({
+        //     action: 'REQUESTGAMESET',
+        // })
     }
 
     respondGameSet(receiver) {
-        this.broadcast({
-            action: 'RESPONDGAMESET',
-            data: databus.gameSet
-        }, [receiver]);
+        // this.broadcast({
+        //     action: 'RESPONDGAMESET',
+        //     data: databus.gameSet
+        // }, [receiver]);
     }
 
     announce() {
-        this.broadcast({
-            action: 'ANNOUNCE',
-        }, [databus.ownerPosNum])
+        // this.broadcast({
+        //     action: 'ANNOUNCE',
+        // }, [databus.ownerPosNum])
     }
 
     playCards(cards) {
-        this.broadcast({
-            action: 'PLAYCARDS',
-            data: cards
-        }, [databus.ownerPosNum])
+        // this.broadcast({
+        //     action: 'PLAYCARDS',
+        //     data: cards
+        // }, [databus.ownerPosNum])
     }
 
     pass() {
-        this.broadcast({
-            action: 'PASS',
-        }, [databus.ownerPosNum])
+        // this.broadcast({
+        //     action: 'PASS',
+        // }, [databus.ownerPosNum])
     }
 
     getRoomInfo() {

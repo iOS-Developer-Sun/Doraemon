@@ -42,10 +42,9 @@ export default {
 
     gameState: {
         init: 0,
-        distributing: 1,
-        announcing: 2,
-        playing: 3,
-        finished: 4,
+        announcing: 1,
+        playing: 2,
+        finished: 3,
     },
 
     sortStyle: {

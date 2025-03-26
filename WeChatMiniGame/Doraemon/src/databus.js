@@ -11,20 +11,20 @@ class DataBus {
         this.noShuffle = false;
         this.cards_count = 0;
         this.max_players_count = 5;
-        this.announcingCountdown = 10;
         this.punishmentScore = 40;
         this.springRule = true;
+        this.announcing = true;
 
         // TODO test
         this.testMode = true;
         // this.noShuffle = true;
-        this.onePair = true;
+        // this.onePair = true;
         this.punishmentScore = 20;
         this.springRule = false;
+        // this.announcing = false;
         // this.cards_count = 10;
-        // this.test_cards = [106, 105, 107, 104, 80, 81, 82, 83, 84, 85, 86, 87, 56, 57];
-        this.max_players_count = 3;
-        this.announcingCountdown = 0;
+        this.test_cards = [106, 105, 107, 80, 57];
+        this.max_players_count = 2;
 
         this.reset();
     }

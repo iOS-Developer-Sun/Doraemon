@@ -22,6 +22,9 @@ export class PlayingGame {
     deck = [];
 
     /** @type {number} */
+    jokersCount = 0;
+
+    /** @type {number} */
     totalScore = 0;
 
     /** @type {number[][]} */
@@ -29,11 +32,11 @@ export class PlayingGame {
 
     /** @type {number[]} */
     jokerPlayers = [];
+    jokerPlayersPendingAnnouncing = [];
 
     state = config.gameState.init;
     currentPlayer = -1;
     announcer = -1;
-    announcingCountdown = 0;
 
     /** @type {Hand[]} */
     currentRoundHands = [];
@@ -91,51 +94,6 @@ export class PlayingGame {
         return arrayContainsObjectsFromArray(this.winners, this.jokerPlayers) || arrayContainsObjectsFromArray(this.winners, this.nonJokerPlayers());
     }
 
-    shuffle() {
-        let cards = [];
-        if (databus.test_cards) {
-            cards = databus.test_cards.slice();
-        } else {
-            if (databus.onePair) {
-                const cards_count = 54;
-                for (let i = cards_count - 1; i >= 0; i--) {
-                    let card = i * 2;
-                    cards.push(card);
-                }
-            } else {
-                const cards_count = 108;
-                for (let i = cards_count - 1; i >= 0; i--) {
-                    let card = i;
-                    cards.push(card);
-                }
-            }
-
-            if (!databus.noShuffle) {
-                var currentIndex = cards.length;
-                while (currentIndex != 0) {
-                    let randomIndex = Math.floor(Math.random() * currentIndex);
-                    currentIndex--;
-                    [cards[currentIndex], cards[randomIndex]] = [
-                        cards[randomIndex], cards[currentIndex]];
-                }
-            }
-        }
-
-        let deck = cards;
-        if (databus.cards_count > 0) {
-            deck = cards.slice(0, databus.cards_count);
-        }
-
-        this.deck = deck;
-        this.jokersCount = getJokersCount(deck);
-        this.totalScore = getCardsScore(deck);
-        this.state = config.gameState.distributing;
-    }
-
-    static randomPlayerIndex() {
-        return Math.floor(Math.random() * databus.max_players_count);
-    }
-
     currentRoundScore() {
         let hands = this.currentRoundHands;
         let totalScore = 0;
@@ -189,28 +147,6 @@ export class PlayingGame {
         return count > jokerCardsCount;
     }
 
-    turnToNextPlayingTeammate() {
-        let currentPlayer = this.currentPlayer;
-        let isJokerTeam = this.jokerPlayers.includes(currentPlayer);
-        if (isJokerTeam) {
-            let teammate = arrayByRemovingObjectsFromArray(this.jokerPlayers, [currentPlayer])[0];
-            if (this.isObviousJokerPlayer(teammate)) {
-                this.currentPlayer = teammate;
-            } else {
-                this.currentPlayer = this.nextPlayingPlayer(this.currentPlayer);
-            }
-        } else {
-            let nextPlayingPlayer = this.nextPlayingPlayer(this.currentPlayer);
-            while (true) {
-                if (!this.isObviousJokerPlayer(nextPlayingPlayer)) {
-                    break;
-                }
-                nextPlayingPlayer = this.nextPlayingPlayer(nextPlayingPlayer);
-            }
-            this.currentPlayer = nextPlayingPlayer;
-        }
-    }
-
     lastHandPlayer() {
         let hands = this.currentRoundHands;
         if (hands == undefined || hands.length == 0) {
@@ -234,13 +170,80 @@ export default class GameSet {
     /** @type {PlayingGame} */
     currentGame = null;
 
-    newGame() {
+    newGame(currentPlayer) {
         this.currentGame = new PlayingGame();
+        if (this.games.length > 0) {
+            this.currentGame.currentPlayer = this.games[this.games.length - 1].winner;
+        } else {
+            this.currentGame.currentPlayer = currentPlayer;
+        }
+        console.log('currentPlayer', this.currentGame.currentPlayer);
     }
 
-    shuffle() {
-        this.currentGame.shuffle();
-        this.currentGame.currentPlayer = this.getFirstPlayerIndex();
+    static shuffle() {
+        let cards = [];
+        if (databus.test_cards) {
+            cards = databus.test_cards.slice();
+        } else {
+            if (databus.onePair) {
+                const cards_count = 54;
+                for (let i = cards_count - 1; i >= 0; i--) {
+                    let card = i * 2;
+                    cards.push(card);
+                }
+            } else {
+                const cards_count = 108;
+                for (let i = cards_count - 1; i >= 0; i--) {
+                    let card = i;
+                    cards.push(card);
+                }
+            }
+
+            if (!databus.noShuffle) {
+                var currentIndex = cards.length;
+                while (currentIndex != 0) {
+                    let randomIndex = Math.floor(Math.random() * currentIndex);
+                    currentIndex--;
+                    [cards[currentIndex], cards[randomIndex]] = [
+                        cards[randomIndex], cards[currentIndex]];
+                }
+            }
+        }
+
+        let deck = cards;
+        if (databus.cards_count > 0) {
+            deck = cards.slice(0, databus.cards_count);
+        }
+
+        return deck;
+    }
+
+    static randomPlayerIndex() {
+        return Math.floor(Math.random() * databus.max_players_count);
+    }
+
+    distribute(deck) {
+        const currentGame = this.currentGame;
+        currentGame.deck = deck.slice();
+        currentGame.jokersCount = getJokersCount(deck);
+        currentGame.totalScore = getCardsScore(deck);
+        let currentPlayer = currentGame.currentPlayer;
+        deck.forEach(card => {
+            currentGame.cardLists[currentPlayer].push(card);
+            if (isRedJoker(card)) {
+                currentGame.jokerPlayers.push(currentPlayer);
+                if (databus.announcing) {
+                    currentGame.jokerPlayersPendingAnnouncing.push(currentPlayer);
+                }
+            }
+            currentPlayer = databus.index(currentPlayer + 1);
+        });
+
+        if (currentGame.jokerPlayersPendingAnnouncing.length > 0) {
+            currentGame.state = config.gameState.announcing;
+        } else {
+            currentGame.state = config.gameState.playing;
+        }
     }
 
     playCards(cards) {
@@ -270,33 +273,6 @@ export default class GameSet {
 
         if (currentGame.state != config.gameState.finished) {
             this.turnToNextPlayingPlayer();
-        }
-    }
-
-    distributeCard() {
-        const currentGame = this.currentGame;
-        for (let index = 0; index < currentGame.cardLists.length; index++) {
-            if (currentGame.deck.length == 0) {
-                break;
-            }
-
-            let card = currentGame.deck.pop();
-            currentGame.cardLists[currentGame.currentPlayer].push(card);
-            if (isRedJoker(card)) {
-                currentGame.jokerPlayers.push(currentGame.currentPlayer);
-            }
-            currentGame.currentPlayer = databus.index(currentGame.currentPlayer + 1);
-        }
-
-        if (currentGame.deck.length == 0) {
-            if (currentGame.announcer != -1) {
-                currentGame.currentPlayer = currentGame.announcer;
-                currentGame.state = config.gameState.playing;
-            } else {
-                currentGame.currentPlayer = this.getFirstPlayerIndex();
-                currentGame.state = config.gameState.announcing;
-                currentGame.announcingCountdown = databus.announcingCountdown;
-            }
         }
     }
 
@@ -333,6 +309,30 @@ export default class GameSet {
         if (settles) {
             this.settleHand();
         }
+        console.log('currentPlayer', currentGame.currentPlayer);
+    }
+
+    turnToNextPlayingTeammate() {
+        const currentGame = this.currentGame;
+        let currentPlayer = currentGame.currentPlayer;
+        let isJokerTeam = currentGame.jokerPlayers.includes(currentPlayer);
+        if (isJokerTeam) {
+            let teammate = arrayByRemovingObjectsFromArray(currentGame.jokerPlayers, [currentPlayer])[0];
+            if (currentGame.isObviousJokerPlayer(teammate)) {
+                currentGame.currentPlayer = teammate;
+            } else {
+                currentGame.currentPlayer = currentGame.nextPlayingPlayer(currentGame.currentPlayer);
+            }
+        } else {
+            let nextPlayingPlayer = currentGame.nextPlayingPlayer(currentGame.currentPlayer);
+            while (true) {
+                if (!currentGame.isObviousJokerPlayer(nextPlayingPlayer)) {
+                    break;
+                }
+                nextPlayingPlayer = currentGame.nextPlayingPlayer(nextPlayingPlayer);
+            }
+            currentGame.currentPlayer = nextPlayingPlayer;
+        }
     }
 
     settleHand() {
@@ -340,14 +340,14 @@ export default class GameSet {
         let score = currentGame.currentRoundScore();
         let lastHandPlayer = currentGame.lastHandPlayer();
         currentGame.scores[lastHandPlayer] += score;
-        currentGame.currentRoundHands = []
 
         if (currentGame.isFinalRound()) {
             currentGame.scores[currentGame.lastWinner()] += currentGame.nonWinnersRemainingCardsScore();
             this.settleGame();
         } else {
+            currentGame.currentRoundHands = []
             if (currentGame.winners.includes(currentGame.currentPlayer)) {
-                currentGame.turnToNextPlayingTeammate();
+                this.turnToNextPlayingTeammate();
             }
         }
     }
@@ -396,25 +396,15 @@ export default class GameSet {
     }
 
     finishGame() {
-        this.games.push({ scores: this.currentGame.scores, winner: this.currentGame.winners[0] });
+        this.games.push({
+            scores: this.currentGame.scores,
+            winner: this.currentGame.winners[0]
+        });
         for (let i = 0; i < this.playerTotalScores.length; i++) {
             this.playerTotalScores[i] += this.currentGame.scores[i];
         }
         this.currentGame.state = config.gameState.finished;
         this.currentGame.currentPlayer = databus.ownerPosNum;
-    }
-
-    getFirstPlayerIndex() {
-        if (this.currentGame) {
-            if (this.currentGame.announcer >= 0) {
-                return this.currentGame.announcer;
-            }
-        }
-
-        if (this.games.length === 0) {
-            return PlayingGame.randomPlayerIndex();
-        }
-
-        return this.games[this.games.length - 1].winner;
+        console.log('currentPlayer', this.currentGame.currentPlayer);
     }
 }
