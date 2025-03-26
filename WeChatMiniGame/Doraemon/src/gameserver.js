@@ -127,15 +127,15 @@ class GameServer {
         this.server.onDisconnect((res) => {
             console.log('onDisconnect', res);
             this.isDisconnect = true;
-            res.type !== "game" && wx.showToast({
-                title: "游戏已掉线...",
-                icon: "none",
+            res.type !== 'game' && wx.showToast({
+                title: '游戏已掉线...',
+                icon: 'none',
                 duration: 2e3
             });
-            res.type === "game" && function (that) {
+            res.type === 'game' && function (that) {
                 function relink() {
                     that.server.reconnect().then(function (res) {
-                        console.log("networkType change or onShow -> reconnect", res);
+                        console.log('networkType change or onShow -> reconnect', res);
                         ++that.reconnectSuccess;
                     }).catch(relink);
                 }
@@ -249,6 +249,7 @@ class GameServer {
     }
 
     onSyncFrame(res) {
+        // console.log('onSyncFrame', res.frameId);
         if (res.frameId % 300 === 0) {
             console.log('heart');
         }
@@ -426,40 +427,40 @@ class GameServer {
 
     uploadGameSet() {
         this.broadcast({
-            action: "GAMESET",
+            action: 'GAMESET',
             data: databus.gameSet
         })
     }
 
     requestGameSet() {
         this.broadcast({
-            action: "REQUESTGAMESET",
+            action: 'REQUESTGAMESET',
         })
     }
 
     respondGameSet(receiver) {
         this.broadcast({
-            action: "RESPONDGAMESET",
+            action: 'RESPONDGAMESET',
             data: databus.gameSet
         }, [receiver]);
     }
 
     announce() {
         this.broadcast({
-            action: "ANNOUNCE",
+            action: 'ANNOUNCE',
         }, [databus.ownerPosNum])
     }
 
     playCards(cards) {
         this.broadcast({
-            action: "PLAYCARDS",
+            action: 'PLAYCARDS',
             data: cards
         }, [databus.ownerPosNum])
     }
 
     pass() {
         this.broadcast({
-            action: "PASS",
+            action: 'PASS',
         }, [databus.ownerPosNum])
     }
 
