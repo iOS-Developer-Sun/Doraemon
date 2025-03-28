@@ -7,6 +7,7 @@ class DataBus {
     version = build_time;
 
     constructor() {
+        this.logsWithDate = false;
         this.testMode = false;
         this.noShuffle = false;
         this.cards_count = 0;
@@ -18,12 +19,12 @@ class DataBus {
         // TODO test
         this.testMode = true;
         // this.noShuffle = true;
-        // this.onePair = true;
+        this.onePair = true;
         this.punishmentScore = 20;
         this.springRule = false;
         // this.announcing = false;
         // this.cards_count = 10;
-        this.test_cards = [106, 105, 107, 80, 57];
+        // this.test_cards = [106, 105, 107, 80, 57];
         this.max_players_count = 2;
 
         this.reset();

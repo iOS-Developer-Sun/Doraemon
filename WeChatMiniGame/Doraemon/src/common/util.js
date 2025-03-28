@@ -1,17 +1,23 @@
+import databus from '../databus.js';
+
 function getCurrentDateString() {
     return '[' + (new Date()).toLocaleString() + ']';
 };
-const originalLog = console.log;
-console.log = function () {
-    var args = [].slice.call(arguments);
-    originalLog.apply(console.log,[getCurrentDateString()].concat(args));
-};
 
+const originalLog = console.log;
 const originalError = console.error;
-console.error = function () {
-    var args = [].slice.call(arguments);
-    originalError.apply(console.error,[getCurrentDateString()].concat(args));
-};
+
+if (databus.logsWithDate) {
+    console.log = function () {
+        var args = [].slice.call(arguments);
+        originalLog.apply(console.log, [getCurrentDateString()].concat(args));
+    };
+
+    console.error = function () {
+        var args = [].slice.call(arguments);
+        originalError.apply(console.error, [getCurrentDateString()].concat(args));
+    };
+}
 
 export function getDeviceInfo() {
     let info = {};

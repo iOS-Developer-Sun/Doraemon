@@ -59,12 +59,14 @@ class GameServer {
         this.onRoomInfoChangeHandler = this.onRoomInfoChange.bind(this);
         this.onGameStartHandler = this.onGameStart.bind(this);
         this.onGameEndHandler = this.onGameEnd.bind(this);
+        this.onLockStepErrorHandler = this.onLockStepError.bind(this);
 
         this.server.onBroadcast(this.onBroadcastHandler);
         this.server.onSyncFrame(this.onSyncFrameHandler);
         this.server.onRoomInfoChange(this.onRoomInfoChangeHandler);
         this.server.onGameStart(this.onGameStartHandler);
         this.server.onGameEnd(this.onGameEndHandler);
+        this.server.onLockStepError(this.onLockStepErrorHandler);
 
         this.server.onGameStart((res) => {
             console.log('onGameStart')
@@ -203,31 +205,9 @@ class GameServer {
         console.log('onGameStart');
         this.event.emit('onGameStart', options);
 
-        this.debugTime = setInterval(() => {
-            // this.uploadFrame([
-            //     JSON.stringify({
-            //         c: ++this.statCount,
-            //         t: +new Date(),
-            //         e: config.msg.STAT,
-            //         id: databus.selfClientId,
-            //     })
-            // ]);
-
-            let time = new Date() - this.startTime;
-
-            databus.debugMsg = [
-                `游戏时间: ${parseInt(time / 1000) + 's'}`,
-                // `期望帧数: ${Math.floor(time / this.frameInterval)}帧`,
-                // `实收帧数: ${this.svrFrameIndex}帧`,
-                // `指令延迟: ${this.avgDelay.toFixed(1) + '(' + this.delay + ')'}ms`,
-                `databus.selfPosNum: ${databus.selfPosNum}`,
-                `databus.selfClientId: ${databus.selfClientId}`,
-            ];
-            this.reconnectSuccess && databus.debugMsg.push(`重连成功: ${this.reconnectSuccess}`);
-            this.reconnectFail && databus.debugMsg.push(`重连失败: ${this.reconnectFail}`);
-
-            // databus.gameInstance.debug.updateDebugMsg(databus.debugMsg);
-        }, 10000);
+        this.timer = setInterval(() => {
+            this.uploadFrame(['']);
+        }, 5000);
     }
 
     onGameEnd() {
@@ -235,7 +215,11 @@ class GameServer {
         this.reset();
         this.event.emit('onGameEnd');
 
-        clearInterval(this.debugTime);
+        clearInterval(this.timer);
+    }
+
+    onLockStepError(res) {
+        console.log('onLockStepError', res);
     }
 
     endGame() {
@@ -256,10 +240,12 @@ class GameServer {
         this.frames.push(res);
 
         (res.actionList || []).forEach(frame => {
-            if (databus.gameInstance) {
-                databus.gameInstance.logicUpdate(frame, res.frameId);
-            } else {
-                databus.halt('no gameInstance!');
+            if (frame.length > 0) {
+                if (databus.gameInstance) {
+                    databus.gameInstance.logicUpdate(frame, res.frameId);
+                } else {
+                    databus.halt('no gameInstance!');
+                }
             }
         });
 
@@ -373,9 +359,9 @@ class GameServer {
                 const data = res.data || {};
                 databus.currentAccessInfo = this.accessInfo = data.accessInfo || '';
                 databus.selfClientId = data.clientId;
-                this.event.emit('createRoom');
-                console.log('createRoom:' + data.accessInfo);
                 callback && callback(null);
+                console.log('createRoom:', data.accessInfo);
+                this.event.emit('createRoom');
             },
             fail: (res) => {
                 callback && callback(res);
@@ -410,7 +396,9 @@ class GameServer {
         this.server.uploadFrame({
             actionList: actionList,
             success: (res) => {
-                console.log('uploadFrame success:', res, actionList[0].length);
+                if (actionList[0].length > 0) {
+                    console.log('uploadFrame success:', actionList[0].length);
+                }
             },
             fail: (res) => {
                 console.log('uploadFrame fail:', res, actionList[0].length);

@@ -238,13 +238,10 @@ function getThreeWithTwoStrait(sortedCardIndices, length) {
         if (length >= 3) {
             return { value: { value: base, cards: resultCards() } };
         }
-        else if (length == 2) {
+        else {
             if (minorHasSingle) {
                 return "continue";
             }
-            return { value: { value: base, cards: resultCards() } };
-        }
-        else {
             return { value: { value: base, cards: resultCards() } };
         }
     };

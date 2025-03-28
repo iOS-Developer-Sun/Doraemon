@@ -80,7 +80,8 @@ export default class Room extends PIXI.Container {
 
     appendOpBtn() {
         let startButton = createBtn({
-            img: 'images/start.png',
+            img: 'images/btn_bg.png',
+            text: '开始',
             x: config.windowWidth / 2,
             y: config.windowHeight / 2,
             width: 112,

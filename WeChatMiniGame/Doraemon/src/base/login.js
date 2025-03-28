@@ -28,16 +28,23 @@ class Login {
 
     addLoginBtn() {
         const width = 120;
-        const height = 40;
+        const height = 44;
 
         const button = wx.createUserInfoButton({
-            type: 'image',
-            image: 'images/start.png',
+            type: 'text',
+            text: '开始',
             style: {
                 left: window.innerWidth / 2 - width / 2,
                 top: window.innerHeight / 2 - height / 2,
+                fontSize: 28,
                 width,
                 height,
+                textAlign: 'center',
+                borderWidth: 1,
+                borderColor: '#FFFFFF',
+                borderRadius: height / 2,
+                justifyContent: 'center',
+                lineHeight: 44,
             }
         });
 
