@@ -4,7 +4,7 @@ export function createBtn(options) {
     let { img, text, x, y, onclick, width, height, style } = options;
 
     let btn = PIXI.Sprite.from(img);
-    btn.anchor.set(.5);
+    btn.anchor.set(0.5);
     btn.x = x;
     btn.y = y;
 

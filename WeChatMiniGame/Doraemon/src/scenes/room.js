@@ -1,6 +1,6 @@
 import * as PIXI from '../../libs/pixi.js';
 import config from '../config.js';
-import { createBtn, createText } from '../common/ui.js';
+import { createBtn, createText, addCornerRadius } from '../common/ui.js';
 import databus from '../databus.js';
 import { showTip, createArray } from '../common/util.js';
 import { gsap } from "gsap";
@@ -53,10 +53,10 @@ export default class Room extends PIXI.Container {
 
     appendBackBtn() {
         const back = createBtn({
-            img: 'images/goBack.png',
-            x: 60 + config.safeArea.left,
+            img: 'images/back.png',
+            x: 22 + config.safeArea.left,
             y: 42,
-            width: 120,
+            width: 44,
             height: 44,
             onclick: () => {
                 wx.showModal({
@@ -144,29 +144,38 @@ export default class Room extends PIXI.Container {
         this.addChild(playerView);
         this.playerViews.push(playerView);
 
+        let avatarContainer = new PIXI.Container();
+        avatarContainer.x = 0;
+        avatarContainer.y = 0;
+        avatarContainer.width = length;
+        avatarContainer.height = length;
+        playerView.addChild(avatarContainer);
+        addCornerRadius(avatarContainer, 8);
+
         let avatar = new PIXI.Sprite();
         avatar.x = 0;
         avatar.y = 0;
         avatar.width = length;
         avatar.height = length;
-        playerView.addChild(avatar);
+        avatarContainer.addChild(avatar);
         playerView.drmAvatar = avatar;
 
-        let name = new PIXI.Text('(空位)', { fontSize: 10, align: 'center', fill: "#FFFFFF" });
-        name.x = 0;
-        name.y = length + 2;
-        playerView.addChild(name);
-        playerView.drmName = name;
+        let nameLabel = new PIXI.Text('(空位)', { fontSize: 14, align: 'center', fill: "#FFFFFF" });
+        nameLabel.x = length / 2;
+        nameLabel.y = length + 10;
+        nameLabel.anchor.set(0.5);
+        playerView.addChild(nameLabel);
+        playerView.drmNameLabel = nameLabel;
 
-        const host = new PIXI.Sprite.from("images/hosticon.png");
-        host.scale.set(.8);
-        host.width = 40;
-        host.height = 13;
-        host.x = 0;
-        host.y = -15;
-        host.visible = false;
-        playerView.addChild(host);
-        playerView.drmHost = host;
+        // const host = new PIXI.Sprite.from("images/hosticon.png");
+        // host.scale.set(.8);
+        // host.width = 40;
+        // host.height = 13;
+        // host.x = 0;
+        // host.y = -15;
+        // host.visible = false;
+        // playerView.addChild(host);
+        // playerView.drmHost = host;
 
         this.refreshPlayerView(index + this.selfPosNum, playerView);
 
@@ -210,8 +219,8 @@ export default class Room extends PIXI.Container {
         }
 
         playerView.drmAvatar.texture = PIXI.Texture.from(headimg);
-        playerView.drmName.text = nickname;
-        playerView.drmHost.visible = role == config.roleMap.owner;
+        playerView.drmNameLabel.text = nickname;
+        // playerView.drmHost.visible = role == config.roleMap.owner;
 
         const localIndex = databus.index(index - this.selfPosNum);
         if (offset != 0) {

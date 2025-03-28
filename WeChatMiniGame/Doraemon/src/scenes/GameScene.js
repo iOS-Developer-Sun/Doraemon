@@ -73,10 +73,10 @@ export default class GameScene extends PIXI.Container {
 
     appendBackBtn() {
         const back = createBtn({
-            img: 'images/goBack.png',
-            x: 60 + config.safeArea.left,
+            img: 'images/back.png',
+            x: 22 + config.safeArea.left,
             y: 42,
-            width: 120,
+            width: 44,
             height: 44,
             onclick: () => {
                 this.showModal('离开房间会游戏结束！你确定吗？')
@@ -281,9 +281,9 @@ export default class GameScene extends PIXI.Container {
                 if (member == null) {
                     let fake = {
                         clientId: 100 + index,
-                        headimg: 'images/joker.png',
+                        headimg: 'images/joker_ai.png',
                         isReady: true,
-                        nickname: '机器人' + index,
+                        nickname: '机器人' + index + '(什么都不会)',
                         posNum: index,
                         role: 0
                     };
@@ -319,7 +319,7 @@ export default class GameScene extends PIXI.Container {
             y = config.windowHeight / 5 * 2;
         }
 
-        let playerView = new PIXI.Container();
+        const playerView = new PIXI.Container();
         playerView.x = x;
         playerView.y = y;
         playerView.width = length;
@@ -327,7 +327,7 @@ export default class GameScene extends PIXI.Container {
         this.addChild(playerView);
         this.playerViews[index] = playerView;
 
-        let avatarContainer = new PIXI.Container();
+        const avatarContainer = new PIXI.Container();
         avatarContainer.x = 0;
         avatarContainer.y = 0;
         avatarContainer.width = length;
@@ -335,7 +335,7 @@ export default class GameScene extends PIXI.Container {
         playerView.addChild(avatarContainer);
         addCornerRadius(avatarContainer, 8);
 
-        let avatar = new PIXI.Sprite.from(member.headimg);
+        const avatar = new PIXI.Sprite.from(member.headimg);
         avatar.x = 0;
         avatar.y = 0;
         avatar.width = length;
@@ -344,13 +344,15 @@ export default class GameScene extends PIXI.Container {
         avatarContainer.addChild(avatar);
         playerView.drmAvatar = avatar;
 
-        let nameLabel = new PIXI.Text(member.nickname, { fontSize: 14, align: 'center', fill: 0x515151 });
-        nameLabel.x = 0;
-        nameLabel.y = length + 2;
+        const nameLabel = new PIXI.Text(member.nickname, { fontSize: 14, align: 'center', fill: '#FFFFFF' });
+        nameLabel.x = length / 2;
+        nameLabel.y = length + 10;
+        nameLabel.width = length;
+        nameLabel.anchor.set(0.5);
         playerView.addChild(nameLabel);
         playerView.drmNameLabel = nameLabel;
 
-        let winnerIndexView = createText({
+        const winnerIndexView = createText({
             str: '',
             style: {
                 fontSize: 14,
@@ -367,7 +369,7 @@ export default class GameScene extends PIXI.Container {
         playerView.addChild(winnerIndexView);
         playerView.drmWinnerIndexView = winnerIndexView;
 
-        let scoreLabel = createText({
+        const scoreLabel = createText({
             str: '',
             style: { fontSize: 14, align: 'center', fill: '#00FFFF' },
             left: true,
@@ -379,26 +381,35 @@ export default class GameScene extends PIXI.Container {
         playerView.addChild(scoreLabel);
         playerView.drmScoreLabel = scoreLabel;
 
-        let cardBack = new PIXI.Sprite.from('images/cards/back.png');
+        const cardBack = new PIXI.Sprite.from('images/cards/back.png');
         cardBack.width = 40;
         cardBack.height = 60;
         cardBack.visible = false;
         playerView.addChild(cardBack);
         playerView.drmCardBack = cardBack;
 
-        let jokerSign = new PIXI.Sprite.from('images/cards/54.png');
-        jokerSign.width = 40;
-        jokerSign.height = 60;
+        const jokerCard = new PIXI.Sprite.from('images/cards/54.png');
+        jokerCard.width = 40;
+        jokerCard.height = 60;
+        jokerCard.visible = false;
+        playerView.addChild(jokerCard);
+        playerView.drmJokerCard = jokerCard;
+
+        const jokerCard2 = new PIXI.Sprite.from('images/cards/54.png');
+        jokerCard2.width = 40;
+        jokerCard2.height = 60;
+        jokerCard2.visible = false;
+        playerView.addChild(jokerCard2);
+        playerView.drmJokerCard2 = jokerCard2;
+
+        const jokerSign = new PIXI.Sprite.from('images/joker.png');
+        jokerSign.x = -10;
+        jokerSign.y = -30;
+        jokerSign.width = 64;
+        jokerSign.height = 44;
         jokerSign.visible = false;
         playerView.addChild(jokerSign);
         playerView.drmJokerSign = jokerSign;
-
-        let jokerSign2 = new PIXI.Sprite.from('images/cards/54.png');
-        jokerSign2.width = 40;
-        jokerSign2.height = 60;
-        jokerSign2.visible = false;
-        playerView.addChild(jokerSign2);
-        playerView.drmJokerSign2 = jokerSign2;
 
         // if (databus.testMode) {
         //     playerView.interactive = true;
@@ -931,51 +942,47 @@ export default class GameScene extends PIXI.Container {
             let localIndex = this.localIndex(i);
             let playerView = this.playerViews[localIndex];
 
-            let nameLabel = playerView.drmNameLabel;
-            nameLabel.tint = (i == currentPlayer) ? 0x000000 : 0xFFFFFF;
-            nameLabel.fill = (i == currentPlayer) ? 0x000000 : 0xFFFFFF;
-
             const cardBack = playerView.drmCardBack;
-            const jokerSign = playerView.drmJokerSign;
-            const jokerSign2 = playerView.drmJokerSign2;
+            const jokerCard = playerView.drmJokerCard;
+            const jokerCard2 = playerView.drmJokerCard2;
             let announcedJokersCount = 0;
             const playerCards = cardLists[i].slice().sort((a, b) => b - a);
             const jokersCount = getJokersCount(playerCards);
             if (currentGame.announcer != -1 && jokersCount == 2) {
                 announcedJokersCount = 2;
-                jokerSign.visible = true;
-                jokerSign2.visible = true;
+                jokerCard.visible = true;
+                jokerCard2.visible = true;
             } else if (currentGame.announcer != -1 && jokersCount == 1) {
                 announcedJokersCount = 1;
-                jokerSign.visible = true;
-                jokerSign2.visible = false;
+                jokerCard.visible = true;
+                jokerCard2.visible = false;
             } else {
-                jokerSign.visible = false;
-                jokerSign2.visible = false;
+                jokerCard.visible = false;
+                jokerCard2.visible = false;
             }
+
+            playerView.drmJokerSign.visible = currentGame.isObviousJokerPlayer(i);
 
             let finalRoundCardViewBaseX = 0;
             if (localIndex == 1 || localIndex == 2) {
                 cardBack.x = -50 - announcedJokersCount * 10;
                 cardBack.y = 0;
-                jokerSign.x = cardBack.x + 10;
-                jokerSign.y = 0;
-                jokerSign2.x = cardBack.x + 20;
-                jokerSign2.y = 0;
+                jokerCard.x = cardBack.x + 10;
+                jokerCard.y = 0;
+                jokerCard2.x = cardBack.x + 20;
+                jokerCard2.y = 0;
                 finalRoundCardViewBaseX = -50 - playerCards.length * 8;
             } else if (localIndex == 3 || localIndex == 4) {
                 cardBack.x = 50;
                 cardBack.y = 0;
-                jokerSign.x = cardBack.x + 10;
-                jokerSign.y = 0;
-                jokerSign2.x = cardBack.x + 20;
-                jokerSign2.y = 0;
+                jokerCard.x = cardBack.x + 10;
+                jokerCard.y = 0;
+                jokerCard2.x = cardBack.x + 20;
+                jokerCard2.y = 0;
                 finalRoundCardViewBaseX = 50;
             } else {
-                jokerSign.x = 0;
-                jokerSign.y = -60;
-                jokerSign2.x = 10;
-                jokerSign2.y = -60;
+                jokerCard.visible = false;
+                jokerCard2.visible = false;
             }
 
             let winnerIndexView = playerView.drmWinnerIndexView;
@@ -983,7 +990,6 @@ export default class GameScene extends PIXI.Container {
             winnerIndexView.text = winnerIndex == -1 ? '' : (winnerIndex + 1);
             winnerIndexView.visible = winnerIndex != -1;
 
-            // TODO
             const score = currentGame.scores[i];
             const totalScore = databus.gameSet.playerTotalScores[i];
             playerView.drmScoreLabel.text = '得分:' + score + '/' + totalScore;
@@ -1001,8 +1007,8 @@ export default class GameScene extends PIXI.Container {
 
                 if (isFinalRoundOrFinished) {
                     cardBack.visible = false;
-                    jokerSign.visible = false;
-                    jokerSign2.visible = false;
+                    jokerCard.visible = false;
+                    jokerCard2.visible = false;
 
                     // show cards
                     for (let index = 0; index < playerCards.length; index++) {
@@ -1092,22 +1098,40 @@ export default class GameScene extends PIXI.Container {
         this.scrollContainer.removeChildren();
         let hands = databus.gameSet.currentGame.currentRoundHands;
         const offset = 25;
+        let memberList = this.gameServer.roomInfo.memberList;
         for (let i = 0; i < hands.length; i++) {
             let hand = hands[i];
             let cards = hand.cards;
+            let lastCardView = null;
             for (let j = 0; j < cards.length; j++) {
-                let card = cards[j];
-                let image = pokerCardImage(card);
-                let cardView = new PIXI.Sprite.from(image);
+                const card = cards[j];
+                const image = pokerCardImage(card);
+                const cardView = new PIXI.Sprite.from(image);
                 const cardHeight = 100;
                 const cardWidth = cardHeight * 225 / 300;
                 cardView.x = (this.scrollContainer._width / 2) - (((cards.length / 2) - j) * offset);
                 cardView.y = i * 60;
                 cardView.width = cardWidth;
                 cardView.height = cardHeight;
+                lastCardView = cardView;
                 this.scrollContainer.addChild(cardView);
                 this.scrollContainer.y = -this.scrollContainer.height + this.scrollContainer.drmScrollViewHeight;
             }
+
+            const avatarLength = 30;
+            const avatarContainer = new PIXI.Container();
+            avatarContainer.width = avatarLength;
+            avatarContainer.height = avatarLength;
+            avatarContainer.x = lastCardView.x + 35;
+            avatarContainer.y = lastCardView.y + 10;
+            addCornerRadius(avatarContainer, 5);
+            this.scrollContainer.addChild(avatarContainer);            
+
+            const headimg = memberList[hand.player].headimg;
+            const avatar = new PIXI.Sprite.from(headimg);
+            avatar.width = avatarLength;
+            avatar.height = avatarLength;
+            avatarContainer.addChild(avatar);
         }
     }
 
