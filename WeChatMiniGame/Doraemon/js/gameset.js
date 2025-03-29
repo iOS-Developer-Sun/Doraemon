@@ -1,7 +1,8 @@
 import config from "../src/config";
 import databus from "../src/databus";
 import { getJokersCount, getCardsScore, isRedJoker } from "./poker";
-import { arrayByRemovingObjectsFromArray, numbersArray, createArray, setWithArray, arrayContainsObjectsFromArray } from "../src/common/util";
+import { arrayByRemovingObjectsFromArray, numbersArray, createArray, setWithArray, arrayContainsObjectsFromArray, removeObject } from "../src/common/util";
+import * as PIXI from '../libs/pixi';
 
 export class Game {
     /** @type {number[]} */
@@ -161,14 +162,24 @@ export class PlayingGame {
 export default class GameSet {
     version = 0;
 
+    /** @type {number} */
+    playersCount = databus.max_players_count;
+
     /** @type {Game[]} */
     games = [];
 
     /** @type {number[]} */
-    playerTotalScores = createArray(databus.max_players_count, 0);
+    playerTotalScores = createArray(this.playersCount, 0);
 
     /** @type {PlayingGame} */
     currentGame = null;
+
+    /** @type {number[]} */
+    playersPendingReady = numbersArray(this.playersCount, 0);
+
+    constructor() {
+        this.event = new PIXI.utils.EventEmitter();
+    }
 
     newGame(currentPlayer) {
         this.currentGame = new PlayingGame();
@@ -178,6 +189,14 @@ export default class GameSet {
             this.currentGame.currentPlayer = currentPlayer;
         }
         console.log('currentPlayer', this.currentGame.currentPlayer);
+    }
+
+    getReady(player) {
+        removeObject(this.playersPendingReady, player);
+    }
+
+    isAllReady() {
+        return this.playersPendingReady.length == 0;
     }
 
     static shuffle() {
@@ -340,6 +359,9 @@ export default class GameSet {
         let score = currentGame.currentRoundScore();
         let lastHandPlayer = currentGame.lastHandPlayer();
         currentGame.scores[lastHandPlayer] += score;
+        if (score > 0) {
+            this.event.emit('WINSCORE', { player: lastHandPlayer, score: score });
+        }
 
         if (currentGame.isFinalRound()) {
             currentGame.scores[currentGame.lastWinner()] += currentGame.nonWinnersRemainingCardsScore();
@@ -403,8 +425,13 @@ export default class GameSet {
         for (let i = 0; i < this.playerTotalScores.length; i++) {
             this.playerTotalScores[i] += this.currentGame.scores[i];
         }
+
+        this.event.emit('FINISHGAME', this.currentGame.scores.slice());
+
         this.currentGame.state = config.gameState.finished;
         this.currentGame.currentPlayer = databus.ownerPosNum;
         console.log('currentPlayer', this.currentGame.currentPlayer);
+
+        this.playersPendingReady = numbersArray(databus.max_players_count);
     }
 }

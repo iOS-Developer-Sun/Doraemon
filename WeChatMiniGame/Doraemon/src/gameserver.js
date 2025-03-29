@@ -68,10 +68,6 @@ class GameServer {
         this.server.onGameEnd(this.onGameEndHandler);
         this.server.onLockStepError(this.onLockStepErrorHandler);
 
-        this.server.onGameStart((res) => {
-            console.log('onGameStart')
-        });
-
         const reconnect = () => {
             // 如果logout了，需要先logout再connect
             if (this.isLogout && this.isDisconnect) {
@@ -137,7 +133,7 @@ class GameServer {
             res.type === 'game' && function (that) {
                 function relink() {
                     that.server.reconnect().then(function (res) {
-                        console.log('networkType change or onShow -> reconnect', res);
+                        console.log('relink', res);
                         ++that.reconnectSuccess;
                     }).catch(relink);
                 }
@@ -159,6 +155,11 @@ class GameServer {
     }
 
     reset() {
+        if (this.timer != null) {
+            clearInterval(this.timer);
+            this.timer = null;
+        }
+
         // 本地缓冲帧队列
         this.frames = [];
         // 用于标记帧同步房间是否真正开始，如果没有开始，不能发送指令，玩家不能操作
@@ -197,6 +198,7 @@ class GameServer {
 
     onGameStart(options) {
         if (this.hasGameStart) {
+            console.log('onGameStart hasGameStarted');
             return;
         }
 
@@ -205,17 +207,15 @@ class GameServer {
         console.log('onGameStart');
         this.event.emit('onGameStart', options);
 
-        this.timer = setInterval(() => {
-            this.uploadFrame(['']);
-        }, 5000);
+        // this.timer = setInterval(() => {
+        //     this.uploadFrame(['']);
+        // }, 5000);
     }
 
     onGameEnd() {
         this.settle();
         this.reset();
         this.event.emit('onGameEnd');
-
-        clearInterval(this.timer);
     }
 
     onLockStepError(res) {
@@ -467,7 +467,7 @@ class GameServer {
     }
 
     startGame() {
-        return this.server.startGame({
+        this.server.startGame({
             success: (res) => {
                 console.log('startGame success', res);
             },

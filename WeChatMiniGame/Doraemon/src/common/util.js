@@ -74,6 +74,13 @@ export function arrayByRemovingObjectsFromArray(array, removedObjectsArray) {
     return array.filter(object => !removedObjectsArray.includes(object));
 }
 
+export function removeObject(array, objectToRemove) {
+    const index = array.findIndex(object => object === objectToRemove);
+    if (index != -1) {
+        array.splice(index, 1);
+    }
+}
+
 export function setWithArray(array) {
     var set = [];
     for (let i = 0; i < array.length; i++) {

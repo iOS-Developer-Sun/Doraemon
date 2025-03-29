@@ -2,8 +2,6 @@ import GameSet from '../js/gameset'
 import { build_time } from '../js/precompilation.js'
 
 class DataBus {
-    /** @type {GameSet} */
-    gameSet = null;
     version = build_time;
 
     constructor() {
@@ -24,7 +22,7 @@ class DataBus {
         this.springRule = false;
         // this.announcing = false;
         // this.cards_count = 10;
-        // this.test_cards = [106, 105, 107, 80, 57];
+        this.test_cards = [106, 105, 107, 80, 57];
         this.max_players_count = 2;
 
         this.reset();

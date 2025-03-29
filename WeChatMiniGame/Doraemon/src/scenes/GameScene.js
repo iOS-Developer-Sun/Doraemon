@@ -1,11 +1,21 @@
 import * as PIXI from '../../libs/pixi.js';
 import config from '../config.js';
 import databus from '../databus.js';
-import { createBtn, createText, addCornerRadius } from '../common/ui.js';
+import { createBtn, createText, addCornerRadius, createTextLabel } from '../common/ui.js';
 import { isGreaterThan, pokerCardImage, getJokersCount, getPokerCards, PokerCards, PokerCardsType } from '../../js/poker'
 import { isPointNearPoint, arrayByRemovingObjectsFromArray, arrayIsEqualToArray, createArray } from '../common/util.js'
+import { gsap } from "gsap";
 
 // https://www.flaticon.com/search?author_id=890&style_id=1373&type=standard&word=joker
+/**
+ * TODO
+ * 得分难看
+ * 当前玩家 ？？？ ZZZ
+ * 游戏结束显示得分
+ * 计分体验
+ * 炸弹出牌音效
+ * 金银铜铁
+*/
 
 import GameSet, { Game, PlayingGame } from '../../js/gameset.js';
 
@@ -36,13 +46,17 @@ export default class GameScene extends PIXI.Container {
     cardsContainerView;
 
     /** @type {PIXI.Sprite[]} */
-    playerViews = createArray(databus.max_players_count);
+    playerViews = [];
 
     /** @type {string[]} */
     uploadingFrames = [];
 
+    /** @type {GameSet} */
+    gameSet = null;
+
     constructor() {
         super();
+        this.gameSet = this.newGameSet();
     }
 
     selectedCardViews() {
@@ -56,19 +70,16 @@ export default class GameScene extends PIXI.Container {
 
     launch(gameServer, options) {
         this.gameServer = gameServer;
+
         this.initViews();
         this.onRoomInfoChange();
         if (options && options.isFromReconnection) {
             console.log('launch isFromReconnection');
-            this.reconnecting = true;
-            this.gameServer.requestGameSet();
-        } else {
-            if (databus.isOwner) {
-                setTimeout(() => {
-                    this.newGame();
-                }, 1000);
-            }
+            // this.reconnecting = true;
+            // this.gameServer.requestGameSet();
         }
+
+        this.refresh();
     }
 
     appendBackBtn() {
@@ -91,7 +102,7 @@ export default class GameScene extends PIXI.Container {
             'onRoomInfoChange',
             (res => {
                 this.refreshPlayersInfo();
-                res.memberList.length < databus.max_players_count && this.showModal('对方已离开房间', true);
+                res.memberList.length < this.gameSet.playersCount && this.showModal('对方已离开房间', true);
             }).bind(this)
         );
     }
@@ -117,7 +128,7 @@ export default class GameScene extends PIXI.Container {
         box.addChild(g);
 
         this.msgLabel = createText({
-            str: '正在初始化...',
+            str: '请玩家准备...',
             align: 'center',
             style: { fontSize: font, fill: '#576B95' },
             left: false,
@@ -129,6 +140,15 @@ export default class GameScene extends PIXI.Container {
 
         box.addChild(this.msgLabel);
 
+        const scoreLabelView = createTextLabel('0', {
+            fill: 0xFFFF00,
+            borderWidth: 1,
+        });
+        scoreLabelView.x = config.windowWidth - 200;
+        scoreLabelView.y = 44;
+        this.addChild(scoreLabelView);
+        this.scoreLabel = scoreLabelView.drmLabel;
+
         this.initPlayedCardListScrollView();
         this.initCardsContainerView();
         this.initPlayers();
@@ -139,19 +159,18 @@ export default class GameScene extends PIXI.Container {
     initOpartions() {
         const y = config.windowHeight - 180;
 
-        this.newGameButton = createBtn({
+        this.getReadyButton = createBtn({
             img: 'images/btn_bg.png',
-            text: '开始',
+            text: '准备',
             x: config.windowWidth / 2,
             y: y,
             width: 122,
             height: 44,
             onclick: () => {
-                this.newGame();
+                this.getReady();
             }
         });
-        this.addChild(this.newGameButton);
-        this.newGameButton.visible = false;
+        this.addChild(this.getReadyButton);
 
         this.playButton = createBtn({
             img: 'images/btn_bg.png',
@@ -269,9 +288,10 @@ export default class GameScene extends PIXI.Container {
     }
 
     initPlayers() {
+        this.playerViews = createArray(this.gameSet.playersCount);
         console.log('initPlayers', this.gameServer.roomInfo);
         let memberList = this.gameServer.roomInfo.memberList || [];
-        var players = createArray(databus.max_players_count);
+        var players = createArray(this.gameSet.playersCount);
         if (databus.testMode) {
             memberList.forEach((member) => {
                 players[member.posNum] = member;
@@ -369,17 +389,25 @@ export default class GameScene extends PIXI.Container {
         playerView.addChild(winnerIndexView);
         playerView.drmWinnerIndexView = winnerIndexView;
 
-        const scoreLabel = createText({
-            str: '',
-            style: { fontSize: 14, align: 'center', fill: '#00FFFF' },
-            left: true,
+        const gameScoreLabel = createTextLabel('0', {
+            fill: 0xFFFF00,
             x: 0,
-            y: length + 20,
-            width: length
+            y: length + 10,
+            width: length,
+            heigh: 14,
         });
-        scoreLabel.visible = false;
-        playerView.addChild(scoreLabel);
-        playerView.drmScoreLabel = scoreLabel;
+        playerView.addChild(gameScoreLabel);
+        playerView.drmGameScoreLabel = gameScoreLabel.drmLabel;
+
+        const totalScoreLabel = createTextLabel('0', {
+            fill: 0x00FFFF,
+            x: 0,
+            y: length + 25,
+            width: length,
+            heigh: 14,
+        });
+        playerView.addChild(totalScoreLabel);
+        playerView.drmTotalScoreLabel = totalScoreLabel.drmLabel;
 
         const cardBack = new PIXI.Sprite.from('images/cards/back.png');
         cardBack.width = 40;
@@ -410,22 +438,87 @@ export default class GameScene extends PIXI.Container {
         jokerSign.visible = false;
         playerView.addChild(jokerSign);
         playerView.drmJokerSign = jokerSign;
+    }
 
-        // if (databus.testMode) {
-        //     playerView.interactive = true;
-        //     playerView.on('pointerdown', () => {
-        //         this.test(index);
-        //     });
-        // }
+    newGameSet() {
+        const gameSet = new GameSet();
+        gameSet.event.on('WINSCORE', (object) => {
+            if (!this.reconnecting) {
+                this.winScoreAnimation(object);
+            }
+        });
+        gameSet.event.on('FINISHGAME', (object) => {
+            if (!this.reconnecting) {
+                this.finishGameAnimation(object);
+            }
+        });
+        return gameSet;
+    }
+
+    winScoreAnimation(object) {
+        const player = object.player;
+        const score = object.score;
+
+        const playerView = this.playerViews[this.localIndex(player)];
+        const text = score > 0 ? '+' + score : '' + score;
+        const addScoreLabel = createTextLabel(text, {
+            fill: 0xFFFF00,
+            fontSize: 20
+        });
+        const x = playerView.x;
+        const y = playerView.y;
+        addScoreLabel.x = x;
+        addScoreLabel.y = y;
+        this.addChild(addScoreLabel);
+        gsap.to(addScoreLabel, {
+            keyframes: [
+                { y: y - 40, duration: 1 },
+                { y: y - 50, duration: 3 },
+                { alpha: 0, duration: 1 },
+            ],
+            duration: 5, ease: 'power4.out', onComplete: () => {
+                addScoreLabel.parent.removeChild(addScoreLabel);
+            }
+        });
+    }
+
+    finishGameAnimation(scores) {
+        for (let i = 0; i < scores.length; i++) {
+            const playerView = this.playerViews[this.localIndex(i)];
+            const score = scores[i];
+            const text = score > 0 ? '+' + score : '' + score;
+            const addScoreLabel = createTextLabel(text, {
+                fill: 0x00FFFF,
+                fontSize: 30
+            });
+            const x = playerView.x;
+            const y = playerView.y + 20;
+            addScoreLabel.x = x;
+            addScoreLabel.y = y;
+            addScoreLabel.visible = false;
+            this.addChild(addScoreLabel);
+            gsap.to(addScoreLabel, {
+                keyframes: [
+                    { y: y - 40, duration: 1 },
+                    { y: y - 70, duration: 3 },
+                    { alpha: 0, duration: 1 },
+                ],
+                duration: 7, ease: 'power4.out', onStart: () => {
+                    addScoreLabel.visible = true;
+                }, onComplete: () => {
+                    addScoreLabel.parent.removeChild(addScoreLabel);
+                }
+            });
+        }
     }
 
     updateGameSet(data) {
-        databus.gameSet = new GameSet();
+        this.gameSet = this.newGameSet();
         if (data) {
-            const gameSet = Object.assign(databus.gameSet, data);
+            const gameSet = Object.assign(this.gameSet, data);
             gameSet.newGame();
-            databus.gameSet = gameSet;
-            databus.gameSet.currentGame = Object.assign(gameSet.currentGame, data.currentGame);
+            this.gameSet = gameSet;
+            this.gameSet.currentGame = Object.assign(gameSet.currentGame, data.currentGame);
         }
     }
 
@@ -450,17 +543,27 @@ export default class GameScene extends PIXI.Container {
         return -1;
     }
 
+    handleGetReady(data, sender) {
+        this.gameSet.getReady(sender);
+        if (this.gameSet.isAllReady()) {
+            if (databus.isOwner) {
+                this.newGame();
+            }
+        }
+
+        this.refresh();
+    }
+
     handleNewGame(data, sender) {
         const currentPlayer = data.currentPlayer;
         const deck = data.deck;
-
-        databus.gameSet.newGame(currentPlayer);
-        databus.gameSet.distribute(deck);
+        this.gameSet.newGame(currentPlayer);
+        this.gameSet.distribute(deck);
         this.refresh();
     }
 
     handleAnnouce(data, sender) {
-        const currentGame = databus.gameSet.currentGame;
+        const currentGame = this.gameSet.currentGame;
         if (currentGame.state != config.gameState.announcing) {
             return;
         }
@@ -481,31 +584,31 @@ export default class GameScene extends PIXI.Container {
     }
 
     handlePlayCards(data, sender) {
-        const currentGame = databus.gameSet.currentGame;
+        const currentGame = this.gameSet.currentGame;
         if (sender != currentGame.currentPlayer) {
             // bad routine
             databus.halt('logicUpdate PLAYCARDS: sender ' + sender + ' != currentGame.currentPlayer ' + currentGame.currentPlayer);
             return;
         }
 
-        databus.gameSet.playCards(data);
+        this.gameSet.playCards(data);
         this.refresh();
     }
 
     handlePass(data, sender) {
-        const currentGame = databus.gameSet.currentGame;
+        const currentGame = this.gameSet.currentGame;
         if (sender != currentGame.currentPlayer) {
             // bad routine
             databus.halt('logicUpdate PASS: sender ' + sender + ' != currentGame.currentPlayer ' + currentGame.currentPlayer);
             return;
         }
 
-        databus.gameSet.pass();
+        this.gameSet.pass();
         this.refresh();
     }
 
     handleReset(data, sender) {
-        databus.gameSet = null;
+        this.gameSet = null;
     }
 
     logicUpdate(frame, frameId) {
@@ -541,16 +644,17 @@ export default class GameScene extends PIXI.Container {
         const clientId = frameObject.from;
         const sender = this.senderFromClientId(clientId);
 
-        if (!databus.gameSet) {
-            databus.gameSet = new GameSet();
-        }
-
-        if (version != databus.gameSet.version + 1) {
+        if (version != this.gameSet.version + 1) {
             console.log('Wrong version');
             return;
         }
 
-        databus.gameSet.version = version;
+        this.gameSet.version = version;
+
+        if (action == 'GETREADY') {
+            this.handleGetReady(data, sender);
+            return;
+        }
 
         if (action == 'NEWGAME') {
             this.handleNewGame(data, sender);
@@ -607,7 +711,7 @@ export default class GameScene extends PIXI.Container {
 
     uploadFrame(frameObject) {
         if (frameObject.version == undefined) {
-            frameObject.version = databus.gameSet.version + 1;
+            frameObject.version = this.gameSet.version + 1;
         }
         if (frameObject.from == undefined) {
             frameObject.from = databus.selfClientId;
@@ -628,7 +732,6 @@ export default class GameScene extends PIXI.Container {
     }
 
     pass() {
-        // databus.gameSet.pass();
         this.uploadFrame({
             action: 'PASS'
         });
@@ -644,7 +747,7 @@ export default class GameScene extends PIXI.Container {
     uploadGameSet() {
         this.uploadFrame({
             action: 'GAMESET',
-            data: databus.gameSet
+            data: this.gameSet
         });
         wx.triggerGC();
     }
@@ -771,7 +874,7 @@ export default class GameScene extends PIXI.Container {
     }
 
     cardsContainerViewPointerDown(event) {
-        if (this.cards.length == 0 || databus.gameSet.currentGame.state == config.gameState.finished) {
+        if (this.cards.length == 0 || this.gameSet.currentGame.state == config.gameState.finished) {
             return;
         }
 
@@ -814,7 +917,7 @@ export default class GameScene extends PIXI.Container {
             return;
         }
 
-        if (this.cards.length == 0 || databus.gameSet.currentGame.state == config.gameState.finished) {
+        if (this.cards.length == 0 || this.gameSet.currentGame.state == config.gameState.finished) {
             return;
         }
 
@@ -839,7 +942,7 @@ export default class GameScene extends PIXI.Container {
     }
 
     cardsContainerViewPointerUp(event) {
-        if (this.cards.length == 0 || databus.gameSet.currentGame.state == config.gameState.finished) {
+        if (this.cards.length == 0 || this.gameSet.currentGame.state == config.gameState.finished) {
             return;
         }
 
@@ -928,17 +1031,21 @@ export default class GameScene extends PIXI.Container {
     }
 
     refreshPlayers() {
-        let currentGame = databus.gameSet.currentGame;
+        const currentGame = this.gameSet.currentGame;
+        if (!currentGame) {
+            return;
+        }
+
         let cardLists = currentGame.cardLists;
-        let currentPlayer = databus.gameSet.currentGame.currentPlayer;
-        const isFinalRoundOrFinished = (databus.gameSet.currentGame.state == config.gameState.finished || databus.gameSet.currentGame.isFinalRound());
+        let currentPlayer = this.gameSet.currentGame.currentPlayer;
+        const isFinalRoundOrFinished = (this.gameSet.currentGame.state == config.gameState.finished || this.gameSet.currentGame.isFinalRound());
 
         this.finalRoundCardViews.forEach(cardView => {
             cardView.parent.removeChild(cardView);
         });
         this.finalRoundCardViews = [];
 
-        for (let i = 0; i < databus.max_players_count; i++) {
+        for (let i = 0; i < this.gameSet.playersCount; i++) {
             let localIndex = this.localIndex(i);
             let playerView = this.playerViews[localIndex];
 
@@ -991,10 +1098,9 @@ export default class GameScene extends PIXI.Container {
             winnerIndexView.visible = winnerIndex != -1;
 
             const score = currentGame.scores[i];
-            const totalScore = databus.gameSet.playerTotalScores[i];
-            playerView.drmScoreLabel.text = '得分:' + score + '/' + totalScore;
-            playerView.drmScoreLabel.visible = score > 0;
-            playerView.drmScoreLabel.visible = true;
+            const totalScore = this.gameSet.playerTotalScores[i];
+            playerView.drmGameScoreLabel.text = '局分:' + score;
+            playerView.drmTotalScoreLabel.text = '总分:' + totalScore;
 
             if (i != databus.selfPosNum) {
                 let remaining = playerCards.length - announcedJokersCount;
@@ -1028,7 +1134,12 @@ export default class GameScene extends PIXI.Container {
     }
 
     refreshCards() {
-        let cardList = databus.gameSet.currentGame.cardLists[databus.selfPosNum].slice();
+        const currentGame = this.gameSet.currentGame;
+        if (!currentGame) {
+            return;
+        }
+
+        let cardList = currentGame.cardLists[databus.selfPosNum].slice();
         let toAdd = arrayByRemovingObjectsFromArray(cardList, this.cards);
         let toRemove = arrayByRemovingObjectsFromArray(this.cards, cardList);
         if (toAdd.length == 0) {
@@ -1095,9 +1206,14 @@ export default class GameScene extends PIXI.Container {
     }
 
     refreshPlayedCards() {
+        const currentGame = this.gameSet.currentGame;
+        if (!currentGame) {
+            return;
+        }
+
         this.scrollContainer.removeChildren();
-        let hands = databus.gameSet.currentGame.currentRoundHands;
-        const offset = 25;
+        let hands = currentGame.currentRoundHands;
+        const offset = 20;
         let memberList = this.gameServer.roomInfo.memberList;
         for (let i = 0; i < hands.length; i++) {
             let hand = hands[i];
@@ -1107,10 +1223,10 @@ export default class GameScene extends PIXI.Container {
                 const card = cards[j];
                 const image = pokerCardImage(card);
                 const cardView = new PIXI.Sprite.from(image);
-                const cardHeight = 100;
+                const cardHeight = 80;
                 const cardWidth = cardHeight * 225 / 300;
                 cardView.x = (this.scrollContainer._width / 2) - (((cards.length / 2) - j) * offset);
-                cardView.y = i * 60;
+                cardView.y = i * 40;
                 cardView.width = cardWidth;
                 cardView.height = cardHeight;
                 lastCardView = cardView;
@@ -1118,14 +1234,14 @@ export default class GameScene extends PIXI.Container {
                 this.scrollContainer.y = -this.scrollContainer.height + this.scrollContainer.drmScrollViewHeight;
             }
 
-            const avatarLength = 30;
+            const avatarLength = 24;
             const avatarContainer = new PIXI.Container();
             avatarContainer.width = avatarLength;
             avatarContainer.height = avatarLength;
-            avatarContainer.x = lastCardView.x + 35;
-            avatarContainer.y = lastCardView.y + 10;
-            addCornerRadius(avatarContainer, 5);
-            this.scrollContainer.addChild(avatarContainer);            
+            avatarContainer.x = lastCardView.x + 28;
+            avatarContainer.y = lastCardView.y + 8;
+            addCornerRadius(avatarContainer, 4);
+            this.scrollContainer.addChild(avatarContainer);
 
             const headimg = memberList[hand.player].headimg;
             const avatar = new PIXI.Sprite.from(headimg);
@@ -1206,9 +1322,8 @@ export default class GameScene extends PIXI.Container {
         return shifted;
     }
 
-
     currentRoundScore() {
-        let currentGame = databus.gameSet.currentGame;
+        let currentGame = this.gameSet.currentGame;
         return currentGame.currentRoundScore();
     }
 
@@ -1218,19 +1333,21 @@ export default class GameScene extends PIXI.Container {
         });
     }
 
+    getReady() {
+        this.uploadFrame({
+            action: 'GETREADY'
+        });
+    }
+
     newGame() {
-        let currentPlayer = null;
-        if (!databus.gameSet) {
-            databus.gameSet = new GameSet();
-            currentPlayer = GameSet.randomPlayerIndex();
-        }
         const deck = GameSet.shuffle();
+        let data = { deck };
+        if (this.gameSet.games.length == 0) {
+            data.currentPlayer = GameSet.randomPlayerIndex();
+        }
         this.uploadFrame({
             action: 'NEWGAME',
-            data: {
-                deck: deck,
-                currentPlayer: currentPlayer
-            }
+            data
         });
     }
 
@@ -1242,80 +1359,93 @@ export default class GameScene extends PIXI.Container {
     }
 
     refreshState() {
-        const currentGame = databus.gameSet.currentGame;
-        if (!currentGame) {
-            return;
-        }
+        const currentGame = this.gameSet.currentGame;
 
         let msgLabelText = '';
         let announceButtonVisible = false;
         let passButtonVisible = false;
         let playButtonVisible = false;
-        let newGameButtonVisible = false;
+        let getReadyButtonVisible = this.gameSet.playersPendingReady.includes(databus.selfPosNum);
 
-        const cards = this.cards;
-        const state = currentGame.state;
-        const gameOrdinalString = '第' + (databus.gameSet.games.length + 1) + '局\n';
-        if (state == config.gameState.init) {
-            msgLabelText = gameOrdinalString + '即将开始';
-            this.selectedCards = [];
-        } else if (state == config.gameState.announcing) {
-            msgLabelText = gameOrdinalString + '请等待玩家宣...';
-            let canAnnounce = currentGame.jokerPlayersPendingAnnouncing.includes(databus.selfPosNum);
-            if (canAnnounce) {
-                announceButtonVisible = true;
-            }
-        } else if (state == config.gameState.playing) {
-            let score = this.currentRoundScore();
-            let player = this.players[currentGame.currentPlayer];
-            let name = currentGame.currentPlayer;
-            if (player != undefined) {
-                name = player.nickname;
-            }
-            msgLabelText = gameOrdinalString + '请(' + name + ')出牌...\n' + '本轮累计分值：' + score;
-            if (currentGame.currentPlayer == databus.selfPosNum) {
-                let hands = currentGame.currentRoundHands;
-                let lastHandPokerCards = null;
-                if (hands.length > 0) {
-                    passButtonVisible = true;
+        let currentRoundScore = 0;
 
-                    let lastHand = hands[hands.length - 1];
-                    let lastHandPlayer = lastHand.player;
-                    if (lastHandPlayer != databus.selfPosNum) {
-                        lastHandPokerCards = getPokerCards(lastHand.cards);
-                    }
+        if (currentGame) {
+            const cards = this.cards;
+            const state = currentGame.state;
+            if (state == config.gameState.init) {
+                msgLabelText = '即将开始';
+                this.selectedCards = [];
+            } else if (state == config.gameState.announcing) {
+                msgLabelText = '请等待玩家宣...';
+                let canAnnounce = currentGame.jokerPlayersPendingAnnouncing.includes(databus.selfPosNum);
+                if (canAnnounce) {
+                    announceButtonVisible = true;
                 }
+            } else if (state == config.gameState.playing) {
+                currentRoundScore = this.currentRoundScore();
+                let player = this.players[currentGame.currentPlayer];
+                let name = currentGame.currentPlayer;
+                if (player != undefined) {
+                    name = player.nickname;
+                }
+                msgLabelText = '请(' + name + ')出牌...';
+                if (currentGame.currentPlayer == databus.selfPosNum) {
+                    let hands = currentGame.currentRoundHands;
+                    let lastHandPokerCards = null;
+                    if (hands.length > 0) {
+                        passButtonVisible = true;
 
-                let canPlayThreeWithOne = (this.selectedCards.length == 4
-                    && cards.length == 4
-                    && lastHandPokerCards == null);
-
-                /** @type {PokerCards} */
-                let pokerCards = getPokerCards(this.selectedCards);
-                if (pokerCards != undefined) {
-                    if (lastHandPokerCards) {
-                        if (isGreaterThan(pokerCards, lastHandPokerCards)) {
-                            playButtonVisible = true;
-                        }
-                    } else {
-                        if (canPlayThreeWithOne || pokerCards.type != PokerCardsType.threeWithOne) {
-                            playButtonVisible = true;
+                        let lastHand = hands[hands.length - 1];
+                        let lastHandPlayer = lastHand.player;
+                        if (lastHandPlayer != databus.selfPosNum) {
+                            lastHandPokerCards = getPokerCards(lastHand.cards);
                         }
                     }
+
+                    let canPlayThreeWithOne = (this.selectedCards.length == 4
+                        && cards.length == 4
+                        && lastHandPokerCards == null);
+
+                    /** @type {PokerCards} */
+                    let pokerCards = getPokerCards(this.selectedCards);
+                    if (pokerCards != undefined) {
+                        if (lastHandPokerCards) {
+                            if (isGreaterThan(pokerCards, lastHandPokerCards)) {
+                                playButtonVisible = true;
+                            }
+                        } else {
+                            if (canPlayThreeWithOne || pokerCards.type != PokerCardsType.threeWithOne) {
+                                playButtonVisible = true;
+                            }
+                        }
+                    }
                 }
+            } else if (state == config.gameState.finished) {
+                const gameOrdinalString = '第' + (this.gameSet.games.length + 1) + '局';
+                msgLabelText = gameOrdinalString + '结束';
+
+                for (let i = 0; i < currentGame.scores.length; i++) {
+                    const index = this.remoteIndex(i);
+                    const score = currentGame.scores[index];
+                    const player = this.players[index];
+                    const name = player.nickname;
+                    msgLabelText = msgLabelText + '\n' + name + ':' + score;
+                }
+
+                this.selectedCards = [];
             }
-        } else if (state == config.gameState.finished) {
-            msgLabelText = gameOrdinalString + '结束';
-            newGameButtonVisible = databus.isOwner;
-            this.selectedCards = [];
+        } else {
+            msgLabelText = getReadyButtonVisible ? '请玩家准备' : '请等待其他玩家准备...'
         }
 
         this.msgLabel.text = msgLabelText;
+        this.scoreLabel.text = currentRoundScore;
+
         this.announceButton.visible = announceButtonVisible;
         this.giveUpAnnouncingButton.visible = announceButtonVisible;
         this.passButton.visible = passButtonVisible;
         this.playButton.visible = playButtonVisible;
-        this.newGameButton.visible = newGameButtonVisible;
+        this.getReadyButton.visible = getReadyButtonVisible;
     }
 
     test(index) {

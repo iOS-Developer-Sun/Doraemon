@@ -66,3 +66,51 @@ export function addCornerRadius(sprite, cornerRadius) {
     sprite.mask = mask;
     sprite.addChild(mask);
 }
+
+export function createTextLabel(text, style) {
+    if (!style.fontSize) { style.fontSize = 14; }
+    if (!style.fontFamily) { style.fontFamily = 'Arial'; }
+    if (!style.align) { style.align = 'center'; }
+    if (!style.width) { style.width = 40; }
+    if (!style.height) { style.height = 30; }
+    if (!style.x) { style.x = 0; }
+    if (!style.y) { style.y = 0; }
+    if (!style.fill) { style.fill = '#FFFFFF'; }
+    if (!style.borderColor) { style.borderColor = style.fill; }
+
+    const width = style.width;
+    const height = style.height;
+    const x = style.x;
+    const y = style.y;
+
+    const container = new PIXI.Container();
+    container.width = width;
+    container.height = height;
+    container.x = x;
+    container.y = y;
+
+    const background = new PIXI.Graphics();
+    if (style.borderWidth && style.borderColor) {
+        background.lineStyle(2, style.borderColor, style.borderWidth);
+    }
+    if (style.backgroundColor) {
+        background.beginFill(style.backgroundColor);
+    }
+    background.drawRoundedRect(0, 0, width, height, height / 2);
+    background.endFill();
+    container.addChild(background);
+
+    const label = new PIXI.Text(text, {
+        fill: style.fill,
+        fontSize: style.fontSize,
+        fontFamily: style.fontFamily
+    });
+    label.x = width / 2;
+    label.y = height / 2;
+    if (!style.left) {
+        label.anchor.set(0.5);
+    }
+    container.addChild(label);
+    container.drmLabel = label;
+    return container;
+}
