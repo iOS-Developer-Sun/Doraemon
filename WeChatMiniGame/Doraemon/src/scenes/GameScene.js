@@ -48,8 +48,8 @@ export default class GameScene extends PIXI.Container {
     /** @type {PIXI.Sprite[]} */
     playerViews = [];
 
-    /** @type {string[]} */
-    uploadingFrames = [];
+    /** @type {object[]} */
+    uploadingFrame = null;
 
     /** @type {GameSet} */
     gameSet = null;
@@ -545,10 +545,63 @@ export default class GameScene extends PIXI.Container {
     }
 
     handleGetReady(data, sender) {
+        if (!databus.isOwner && sender != databus.selfPosNum) {
+            return;
+        }
+
         this.gameSet.getReady(sender);
-        if (this.gameSet.isAllReady()) {
-            if (databus.isOwner) {
+        if (databus.isOwner) {
+            this.updateReady();
+        }
+
+        this.refresh();
+    }
+
+    handleAnnouce(data, sender) {
+        const currentGame = this.gameSet.currentGame;
+        if (currentGame.state != config.gameState.announcing) {
+            return;
+        }
+
+        if (data) {
+            currentGame.announcer = sender;
+            currentGame.jokerPlayersPendingAnnouncing = [];
+        } else {
+            currentGame.jokerPlayersPendingAnnouncing = currentGame.jokerPlayersPendingAnnouncing.filter(player => player != sender);
+        }
+        if (databus.isOwner) {
+            this.updateAnnouncer();
+        }
+        this.refresh();
+    }
+
+    handleUpdateReady(data, sender) {
+        this.gameSet.playersPendingReady = data;
+        this.refresh();
+
+        if (databus.isOwner) {
+            if (this.gameSet.isAllReady()) {
                 this.newGame();
+            }
+        }
+    }
+
+    handleUpdateAnnouncer(data, sender) {
+        const currentGame = this.gameSet.currentGame;
+        if (currentGame.state != config.gameState.announcing) {
+            return;
+        }
+
+        const announcer = data.announcer;
+        if (announcer) {
+            currentGame.announcer = announcer;
+            currentGame.jokerPlayersPendingAnnouncing = [];
+            currentGame.currentPlayer = announcer;
+            currentGame.state = config.gameState.playing;
+        } else {
+            currentGame.jokerPlayersPendingAnnouncing = data.jokerPlayersPendingAnnouncing;
+            if (currentGame.jokerPlayersPendingAnnouncing.length == 0) {
+                currentGame.state = config.gameState.playing;
             }
         }
 
@@ -560,27 +613,6 @@ export default class GameScene extends PIXI.Container {
         const deck = data.deck;
         this.gameSet.newGame(currentPlayer);
         this.gameSet.distribute(deck);
-        this.refresh();
-    }
-
-    handleAnnouce(data, sender) {
-        const currentGame = this.gameSet.currentGame;
-        if (currentGame.state != config.gameState.announcing) {
-            return;
-        }
-
-        if (data) {
-            currentGame.currentPlayer = sender;
-            currentGame.announcer = sender;
-            currentGame.jokerPlayersPendingAnnouncing = [];
-            currentGame.state = config.gameState.playing;
-            console.log('currentPlayer', currentGame.currentPlayer);
-        } else {
-            currentGame.jokerPlayersPendingAnnouncing = currentGame.jokerPlayersPendingAnnouncing.filter(player => player != sender);
-            if (currentGame.jokerPlayersPendingAnnouncing.length == 0) {
-                currentGame.state = config.gameState.playing;
-            }
-        }
         this.refresh();
     }
 
@@ -618,14 +650,15 @@ export default class GameScene extends PIXI.Container {
         }
 
         if (frameId >= 0) {
-            if (this.uploadingFrames.length > 0) {
-                if (JSON.stringify(frame) == JSON.stringify(this.uploadingFrames[0])) {
-                    console.log('verified frame:', frame);
-                    if (!this.uploadFrameVerificationTimer) {
-                        databus.halt('No timer?');
+            if (this.uploadingFrame != null) {
+                if (JSON.stringify(frame) == JSON.stringify(this.uploadingFrame)) {
+                    console.log('Verified frame:', frame);
+                    this.uploadingFrame = null;
+                    wx.hideLoading();
+                    if (this.uploadFrameVerificationTimer != null) {
+                        clearInterval(this.uploadFrameVerificationTimer);
+                        this.uploadFrameVerificationTimer = null;
                     }
-                    this.uploadingFrames.splice(0, 1);
-                    this.createReuploadFramesTimerIfNeeded();
                     return;
                 }
                 console.log('Wrong frame!', frameId, frame);
@@ -659,6 +692,16 @@ export default class GameScene extends PIXI.Container {
             return;
         }
 
+        if (action == 'GETREADY') {
+            this.handleGetReady(data, sender);
+            return;
+        }
+
+        if (action == 'ANNOUNCE') {
+            this.handleAnnouce(data, sender);
+            return;
+        }
+
         if (version != this.gameSet.version + 1) {
             console.log('Wrong version', frame, this.gameSet.version);
             return;
@@ -666,19 +709,18 @@ export default class GameScene extends PIXI.Container {
 
         this.gameSet.version = version;
 
-        if (action == 'GETREADY') {
-            this.handleGetReady(data, sender);
-            return;
-        }
-
         if (action == 'NEWGAME') {
             this.handleNewGame(data, sender);
             return;
         }
 
-        if (action == 'ANNOUNCE') {
-            this.handleAnnouce(data, sender);
+        if (action == 'UPDATEREADY') {
+            this.handleUpdateReady(data, sender);
             return;
+        }
+
+        if (action == 'UPDATEANNOUNCER') {
+            this.handleUpdateAnnouncer(data, sender);
         }
 
         if (action == 'PLAYCARDS') {
@@ -697,29 +739,9 @@ export default class GameScene extends PIXI.Container {
         }
     }
 
-    addUploadingFrame(frame) {
-        this.uploadingFrames.push(frame);
-        this.createReuploadFramesTimerIfNeeded();
-    }
-
-    createReuploadFramesTimerIfNeeded() {
-        if (this.uploadFrameVerificationTimer != null) {
-            clearInterval(this.uploadFrameVerificationTimer);
-            this.uploadFrameVerificationTimer = null;
-        }
-
-        if (this.uploadingFrames.length == 0) {
-            return;
-        }
-
-        this.uploadFrameVerificationTimer = setTimeout(() => {
-            this.reuploadFrames();
-        }, 1000);
-    }
-
     reuploadFrames() {
-        if (this.uploadingFrames.length > 0) {
-            this.serverUploadFrame(this.uploadingFrames[0]);
+        if (this.uploadingFrame != null) {
+            this.serverUploadFrame(this.uploadingFrame);
             this.uploadFrameVerificationTimer = setTimeout(() => {
                 this.reuploadFrames();
             }, 1000 * 300);
@@ -727,6 +749,11 @@ export default class GameScene extends PIXI.Container {
     }
 
     uploadFrame(frame) {
+        if (this.uploadingFrame != null) {
+            wx.showLoading({ title: '正在连接中...' });
+            return;
+        }
+
         if (frame.version == undefined) {
             frame.version = this.gameSet.version + 1;
         }
@@ -734,9 +761,12 @@ export default class GameScene extends PIXI.Container {
             frame.from = databus.selfClientId;
         }
 
-        this.addUploadingFrame(frame);
         this.logicUpdate(frame, -1);
         this.serverUploadFrame(frame);
+
+        this.uploadFrameVerificationTimer = setTimeout(() => {
+            this.reuploadFrames();
+        }, 1000 * 300);
     }
 
     serverUploadFrame(frame) {
@@ -757,14 +787,15 @@ export default class GameScene extends PIXI.Container {
         this.uploadFrame({
             action: 'RESPONDGAMESET',
             data: this.gameSet,
-            receivers : [receiver]
+            receivers: [receiver]
         });
     }
 
     announce(result) {
         this.uploadFrame({
             action: 'ANNOUNCE',
-            data: result
+            data: result,
+            version: this.gameSet.version
         });
     }
 
@@ -1372,7 +1403,25 @@ export default class GameScene extends PIXI.Container {
 
     getReady() {
         this.uploadFrame({
-            action: 'GETREADY'
+            action: 'GETREADY',
+            version: this.gameSet.version
+        });
+    }
+
+    updateReady() {
+        this.uploadFrame({
+            action: 'UPDATEREADY',
+            data: this.gameSet.playersPendingReady
+        });
+    }
+
+    updateAnnouncer() {
+        this.uploadFrame({
+            action: 'UPDATEANNOUNCER',
+            data: {
+                announcer: this.gameSetcurrentGame.announcer,
+                jokerPlayersPendingAnnouncing: this.gameSet.currentGame.jokerPlayersPendingAnnouncing
+            }
         });
     }
 
