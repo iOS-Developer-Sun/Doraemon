@@ -5,6 +5,7 @@ class DataBus {
     version = build_time;
 
     constructor() {
+        this.usesBroadcast = true;
         this.logsWithDate = false;
         this.testMode = false;
         this.noShuffle = false;

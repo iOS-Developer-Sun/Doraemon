@@ -75,8 +75,8 @@ export default class GameScene extends PIXI.Container {
         this.onRoomInfoChange();
         if (options && options.isFromReconnection) {
             console.log('launch isFromReconnection');
-            // this.reconnecting = true;
-            // this.gameServer.requestGameSet();
+            this.reconnecting = true;
+            this.requestGameSet();
         }
 
         this.refresh();
@@ -519,6 +519,7 @@ export default class GameScene extends PIXI.Container {
             gameSet.newGame();
             this.gameSet = gameSet;
             this.gameSet.currentGame = Object.assign(gameSet.currentGame, data.currentGame);
+            this.refresh();
         }
     }
 
@@ -618,7 +619,7 @@ export default class GameScene extends PIXI.Container {
 
         if (frameId >= 0) {
             if (this.uploadingFrames.length > 0) {
-                if (frame === this.uploadingFrames[0]) {
+                if (JSON.stringify(frame) == JSON.stringify(this.uploadingFrames[0])) {
                     console.log('verified frame:', frame);
                     if (!this.uploadFrameVerificationTimer) {
                         databus.halt('No timer?');
@@ -627,25 +628,39 @@ export default class GameScene extends PIXI.Container {
                     this.createReuploadFramesTimerIfNeeded();
                     return;
                 }
-                console.log('Wrong frame!', frameId);
+                console.log('Wrong frame!', frameId, frame);
             }
         }
 
-        const frameObject = JSON.parse(frame);
         if (frameId >= 0) {
-            console.log('onSyncFrame action: ', frameObject);
+            console.log('onSyncFrame action: ', frame);
         } else {
-            console.log('local action: ', frameObject);
+            console.log('local action: ', frame);
         }
 
-        const version = frameObject.version;
-        const action = frameObject.action;
-        const data = frameObject.data;
-        const clientId = frameObject.from;
+        const version = frame.version;
+        const action = frame.action;
+        const data = frame.data;
+        const clientId = frame.from;
         const sender = this.senderFromClientId(clientId);
 
+        if (action == 'REQUESTGAMESET') {
+            if (clientId != databus.selfClientId && !this.reconnecting) {
+                this.respondGameSet(clientId);
+            }
+            return;
+        }
+
+        if (action == 'RESPONDGAMESET') {
+            if (clientId != databus.selfClientId && this.reconnecting) {
+                this.updateGameSet(data);
+                this.reconnecting = false;
+            }
+            return;
+        }
+
         if (version != this.gameSet.version + 1) {
-            console.log('Wrong version');
+            console.log('Wrong version', frame, this.gameSet.version);
             return;
         }
 
@@ -703,25 +718,47 @@ export default class GameScene extends PIXI.Container {
     }
 
     reuploadFrames() {
-        this.gameServer.uploadFrame(this.uploadingFrames);
-        this.uploadFrameVerificationTimer = setTimeout(() => {
-            this.reuploadFrames();
-        }, 1000);
+        if (this.uploadingFrames.length > 0) {
+            this.serverUploadFrame(this.uploadingFrames[0]);
+            this.uploadFrameVerificationTimer = setTimeout(() => {
+                this.reuploadFrames();
+            }, 1000 * 300);
+        }
     }
 
-    uploadFrame(frameObject) {
-        if (frameObject.version == undefined) {
-            frameObject.version = this.gameSet.version + 1;
+    uploadFrame(frame) {
+        if (frame.version == undefined) {
+            frame.version = this.gameSet.version + 1;
         }
-        if (frameObject.from == undefined) {
-            frameObject.from = databus.selfClientId;
+        if (frame.from == undefined) {
+            frame.from = databus.selfClientId;
         }
 
-        const frame = JSON.stringify(frameObject);
         this.addUploadingFrame(frame);
         this.logicUpdate(frame, -1);
+        this.serverUploadFrame(frame);
+    }
 
-        this.gameServer.uploadFrame([frame]);
+    serverUploadFrame(frame) {
+        if (databus.usesBroadcast) {
+            this.gameServer.broadcast(frame);
+        } else {
+            this.gameServer.uploadFrame(frame);
+        }
+    }
+
+    requestGameSet() {
+        this.uploadFrame({
+            action: 'REQUESTGAMESET'
+        })
+    }
+
+    respondGameSet(receiver) {
+        this.uploadFrame({
+            action: 'RESPONDGAMESET',
+            data: this.gameSet,
+            receivers : [receiver]
+        });
     }
 
     announce(result) {
@@ -1421,7 +1458,7 @@ export default class GameScene extends PIXI.Container {
                     }
                 }
             } else if (state == config.gameState.finished) {
-                const gameOrdinalString = '第' + (this.gameSet.games.length + 1) + '局';
+                const gameOrdinalString = '第' + (this.gameSet.games.length) + '局';
                 msgLabelText = gameOrdinalString + '结束';
 
                 for (let i = 0; i < currentGame.scores.length; i++) {

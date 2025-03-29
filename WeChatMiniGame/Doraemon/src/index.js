@@ -110,18 +110,7 @@ export default class App extends PIXI.Application {
         });
 
         gameServer.event.on('onGameEnd', () => {
-            gameServer.gameResult.forEach((member) => {
-                var isSelf = member.nickname === databus.userInfo.nickName;
-                isSelf && wx.showModal({
-                    content: member.win ? "你已获得胜利" : "你输了",
-                    confirmText: "返回首页",
-                    confirmColor: "#02BB00",
-                    showCancel: false,
-                    success: () => {
-                        gameServer.clear();
-                    }
-                });
-            });
+            gameServer.clear();
         });
     }
 

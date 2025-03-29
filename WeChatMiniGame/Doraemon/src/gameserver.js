@@ -21,16 +21,7 @@ class GameServer {
         // 用于存房间信息
         this.roomInfo = {};
 
-        // 用于标记帧同步房间是否真正开始，如果没有开始，不能发送指令，玩家不能操作
         this.hasGameStart = false;
-        // 帧同步帧率
-        this.fps = 30;
-        // 逻辑帧的时间间隔
-        this.frameInterval = parseInt(1000 / this.fps);
-        // 为了防止网络抖动设置的帧缓冲数，类似于放视频
-        this.frameJitLenght = 2;
-
-        this.gameResult = [];
 
         // 用于标识是否重连中
         this.reconnecting = false;
@@ -160,23 +151,10 @@ class GameServer {
             this.timer = null;
         }
 
-        // 本地缓冲帧队列
-        this.frames = [];
-        // 用于标记帧同步房间是否真正开始，如果没有开始，不能发送指令，玩家不能操作
-        this.frameStart = false;
-        // 游戏开始的时间
-        this.startTime = new Date();
-        // 当前游戏运行的帧位
-        this.currFrameIndex = 0;
         // 当前收到的最新帧帧号
         this.svrFrameIndex = 0;
-        this.hasSetStart = false;
         this.hasGameStart = false;
         wx.setKeepScreenOn({ keepScreenOn: false });
-
-        this.statCount = 0;
-        this.avgDelay = 0;
-        this.delay = 0;
 
         this.isDisconnect = false;
         this.isLogout = false;
@@ -184,21 +162,19 @@ class GameServer {
 
     onBroadcast(message) {
         let { msg } = message;
-        let object = JSON.parse(msg);
-        let { action, data } = object;
-        console.log('onBroadcast: ' + action);
-        if (action == 'START') {
+        let frame = JSON.parse(msg);
+        console.log('onBroadcast: ', frame);
+        if (frame.action == 'START') {
             this.startGame();
         } else {
-            // if (databus.gameInstance) {
-            //     databus.gameInstance.logicUpdate(message.senderPosNum, action, data);
-            // }
+            if (databus.gameInstance) {
+                databus.gameInstance.logicUpdate(frame, this.svrFrameIndex);
+            }
         }
     }
 
     onGameStart(options) {
         if (this.hasGameStart) {
-            console.log('onGameStart hasGameStarted');
             return;
         }
 
@@ -237,10 +213,11 @@ class GameServer {
             console.log('heart');
         }
         this.svrFrameIndex = res.frameId;
-        this.frames.push(res);
+        // this.frames.push(res);
 
-        (res.actionList || []).forEach(frame => {
-            if (frame.length > 0) {
+        (res.actionList || []).forEach(action => {
+            if (action.length > 0) {
+                const frame = JSON.parse(action);
                 if (databus.gameInstance) {
                     databus.gameInstance.logicUpdate(frame, res.frameId);
                 } else {
@@ -248,21 +225,6 @@ class GameServer {
                 }
             }
         });
-
-        if (this.frames.length > this.frameJitLenght) {
-            this.frameStart = true;
-        }
-
-        if (!this.hasSetStart) {
-            console.log('get first frame');
-            this.startTime = new Date() - this.frameInterval;
-            this.hasSetStart = true;
-        }
-
-        if (this.reconnecting && res.frameId >= this.reconnectMaxFrameId) {
-            this.reconnecting = false;
-            this.startTime = new Date() - this.frameInterval * this.reconnectMaxFrameId;
-        }
     }
 
     onReconnect(res) {
@@ -387,79 +349,35 @@ class GameServer {
         });
     }
 
-    uploadFrame(actionList) {
+    uploadFrame(frame) {
         if (!this.hasGameStart) {
             console.log('uploadFrame game not stared');
             return;
         }
 
+        const action = JSON.stringify(frame);
+        const actionList = [action];
+
         this.server.uploadFrame({
             actionList: actionList,
             success: (res) => {
-                if (actionList[0].length > 0) {
-                    console.log('uploadFrame success:', actionList[0].length);
-                }
+                console.log('uploadFrame success:', actionList);
             },
             fail: (res) => {
-                console.log('uploadFrame fail:', res, actionList[0].length);
+                console.log('uploadFrame fail:', res, actionList);
             }
         });
     }
 
-    broadcast(msg, toPosNumList) {
-        console.log('broadcast:' + msg.action);
+    broadcast(msg) {
+        console.log('broadcast');
+        const toPosNumList = msg.recevers;
         let string = JSON.stringify(msg);
-        let report;
+        let report = {msg: string};
         if (toPosNumList != undefined) {
-            report = {
-                msg: string,
-                toPosNumList: toPosNumList
-            };
-        } else {
-            report = {
-                msg: string,
-            };
+            report.toPosNumList = toPosNumList;
         }
         this.server.broadcastInRoom(report);
-    }
-
-    uploadGameSet() {
-        // this.broadcast({
-        //     action: 'GAMESET',
-        //     data: databus.gameSet
-        // })
-    }
-
-    requestGameSet() {
-        // this.broadcast({
-        //     action: 'REQUESTGAMESET',
-        // })
-    }
-
-    respondGameSet(receiver) {
-        // this.broadcast({
-        //     action: 'RESPONDGAMESET',
-        //     data: databus.gameSet
-        // }, [receiver]);
-    }
-
-    announce() {
-        // this.broadcast({
-        //     action: 'ANNOUNCE',
-        // }, [databus.ownerPosNum])
-    }
-
-    playCards(cards) {
-        // this.broadcast({
-        //     action: 'PLAYCARDS',
-        //     data: cards
-        // }, [databus.ownerPosNum])
-    }
-
-    pass() {
-        // this.broadcast({
-        //     action: 'PASS',
-        // }, [databus.ownerPosNum])
     }
 
     getRoomInfo() {
@@ -470,6 +388,7 @@ class GameServer {
         this.server.startGame({
             success: (res) => {
                 console.log('startGame success', res);
+                this.onGameStart();
             },
             fail: (res) => {
                 console.log('startGame fail', res);
@@ -512,66 +431,6 @@ class GameServer {
 
     updateReadyStatus(isReady) {
         return this.server.updateReadyStatus({ accessInfo: this.accessInfo, isReady });
-    }
-
-    // update(dt) {
-    //     if (!this.frameStart) {
-    //         return;
-    //     }
-
-    //     // 重连中不执行渲染
-    //     if (!this.reconnecting) {
-    //         databus.gameInstance.renderUpdate(dt);
-    //     }
-
-    //     // 本地从游戏开始到现在的运行时间
-    //     const nowFrameTick = new Date() - this.startTime;
-    //     const preFrameTick = this.currFrameIndex * this.frameInterval;
-
-    //     let currTimeDelta = nowFrameTick - preFrameTick;
-
-    //     if (currTimeDelta >= this.frameInterval) {
-    //         if (this.frames.length) {
-    //             this.execFrame();
-    //             this.currFrameIndex++;
-    //         }
-    //     }
-
-    //     // 可能是断线重连的场景，本地有大量的帧，快进
-    //     if (this.frames.length > this.frameJitLenght) {
-    //         while (this.frames.length) {
-    //             this.execFrame();
-    //             this.currFrameIndex++;
-    //         }
-    //     }
-    // }
-
-    execFrame() {
-        // let frame = this.frames.shift();
-
-        // 每次执行逻辑帧，将指令同步后，演算游戏状态
-        // databus.gameInstance.logicUpdate(this.frameInterval, frame.frameId);
-
-        // (frame.actionList || []).forEach(oneFrame => {
-        // let obj = JSON.parse(oneFrame);
-
-        // switch (obj.e) {
-        //     case config.msg.SHOOT:
-        //         databus.playerMap[obj.n].shoot();
-        //         break;
-
-        //     case config.msg.MOVE_DIRECTION:
-        //         databus.playerMap[obj.n].setDestDegree(obj.d);
-        //         break;
-
-        //     case config.msg.MOVE_STOP:
-        //         databus.playerMap[obj.n].setSpeed(0);
-        //         databus.playerMap[obj.n].desDegree = databus.playerMap[obj.n].frameDegree;
-        //         break;
-        // }
-        // });
-
-        // databus.gameInstance.preditUpdate(this.frameInterval);
     }
 
     settle() {
